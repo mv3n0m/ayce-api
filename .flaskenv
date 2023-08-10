@@ -1,0 +1,4 @@
+FLASK_APP=src:create_app
+FLASK_ENV=development
+FLASK_RUN_PORT=8001
+FLASK_DEBUG=True
