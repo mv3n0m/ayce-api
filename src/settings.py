@@ -34,6 +34,6 @@ class Parser(FlaskParser):
 parser = Parser()
 mailer = SendGridMailer()
 
+rst = Store()
 btcdc = BtcApi(rst)
 mdb = MongoWrapper(os.environ.get("DB_NAME"), os.environ.get("MDB_URI"))
-

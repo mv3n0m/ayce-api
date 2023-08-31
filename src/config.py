@@ -27,3 +27,4 @@ AWS_KEY_SECRET = os.environ.get("AWS_KEY_SECRET")
 LAMBDA_FUNCTION_NAME = os.environ.get("LAMBDA_FUNCTION_NAME")
 LAMBDA_FUNCTION_URL = os.environ.get("LAMBDA_FUNCTION_URL")
 
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
