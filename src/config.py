@@ -4,6 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+SWAGGER = {
+    'swagger': "2.0",
+    'title': '',
+    'description': '',
+    'uiversion': 3,
+    'termsOfService': '',
+    'version': '',
+    'hide_top_bar': True,
+    'favicon': "https://uploads-ssl.webflow.com/64d3ab3d262fca4024951cea/64d3bce14e061751094751f9_logo-color.svg",
+    'head_text': '<div style="margin-top: 20px;display: flex;justify-content: center;"><img src="https://uploads-ssl.webflow.com/64d3ab3d262fca4024951cea/64d3bce14e061751094751f9_logo-color.svg" alt="logo"/></div>'
+}
 
 JWT_SECRET_KEY = os.environ.get("APP_SECRET")
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.environ.get("JWT_EXPIRY_MINUTES", 10)))
