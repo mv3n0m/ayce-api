@@ -1,0 +1,9 @@
+venv
+.env
+notes.md
+*.csv
+extras
+logs
+.vscode
+__pycache__
+lambda
