@@ -12,6 +12,13 @@ from logging.handlers import TimedRotatingFileHandler
 
 load_dotenv()
 
+BTC_ONCHAIN_NODE_ENDPOINT = os.environ.get("BTC_ONCHAIN_NODE_ENDPOINT")
+BTC_ONCHAIN_NODE_USERNAME = os.environ.get("BTC_ONCHAIN_NODE_USERNAME")
+BTC_ONCHAIN_NODE_PASSWORD = os.environ.get("BTC_ONCHAIN_NODE_PASSWORD")
+BTC_LIGHTNING_NODE_ENDPOINT = os.environ.get("BTC_LIGHTNING_NODE_ENDPOINT")
+BTC_LIGHTNING_NODE_MACAROON = os.environ.get("BTC_LIGHTNING_NODE_MACAROON")
+TOKENIZE_KEY = os.environ.get("TOKENIZE_KEY")
+TOKENIZE_ENDPOINT = os.environ.get("TOKENIZE_ENDPOINT")
 
 APP_SECRET = os.environ.get("APP_SECRET")
 JWT_EXPIRY_DAYS = int(os.environ.get("JWT_EXPIRY_DAYS", 1))
@@ -37,3 +44,20 @@ mailer = SendGridMailer()
 rst = Store()
 btcdc = BtcApi(rst)
 mdb = MongoWrapper(os.environ.get("DB_NAME"), os.environ.get("MDB_URI"))
+
+btc_node = BTCNode({
+    "on-chain": {
+        "uri": BTC_ONCHAIN_NODE_ENDPOINT,
+        "username": BTC_ONCHAIN_NODE_USERNAME,
+        "password": BTC_ONCHAIN_NODE_PASSWORD
+    },
+    "lightning": {
+        "uri": BTC_LIGHTNING_NODE_ENDPOINT,
+        "macaroon": BTC_LIGHTNING_NODE_MACAROON
+    }
+})
+
+tknz = Tokenize({
+    "secret_key": TOKENIZE_KEY,
+    "uri": TOKENIZE_ENDPOINT
+})
