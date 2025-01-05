@@ -15,7 +15,7 @@ def list_keys(user_id, *args, **kwargs):
 	return responsify(data, 200)
 
 
-@route("/add-api-key", ["POST"], developer_key_args, _auth="_jwt")
+@route("/add-api-key", ["POST"], developer_key_args, _identity=True)
 def add_key(user, *args, **kwargs):
 	if mdb.get("developer_keys", {"user_id": user._pk, "active": 1, "label": kwargs["label"]}):
 		return responsify({"error": "Developer API key label already exists."}, 400)
@@ -41,14 +41,13 @@ def add_key(user, *args, **kwargs):
 	rst._set(token, otp)
 	mdb.add("developer_keys", { "user_id": user._pk, "active": 0, "token": token, **kwargs })
 
+	# maybe update the JWT token with flag/s or update it at the time of relogin, or not needed at all, run a background job checking the requests
 	return responsify({"success": "OTP sent to user's email.", "token": token}, 201)
 
 
+# This functionality (everywhere where there is otp) and email verification at signup can be minimised into one function to support after-event
 @route("/add-api-key/otp-confirm", ["POST"], token_otp_args)
-def confirm_key_addition(*args, **kwargs):
-
-	token = kwargs["token"]
-	otp = kwargs["otp"]
+def confirm_key_addition(user_id, token, otp):
 
 	try:
 		value = rst._get(token)

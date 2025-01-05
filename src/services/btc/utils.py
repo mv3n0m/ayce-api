@@ -41,4 +41,5 @@ class RequestHandler:
 
         logging.info(content)
 
+        # expiry must be checked properly here as well as on lambda as it is expiring even after payment (maybe last moment update)
         return (response.status_code, {"result": content.get("address") or content.get("bolt11"), "expiry": content.get("expires_at")})

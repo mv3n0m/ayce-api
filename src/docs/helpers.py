@@ -38,6 +38,15 @@ responses:"""
         schema:
           type: {_type}"""
 
+    # if _type == "object":
+    #   doc += """
+    #       properties:"""
+    #   for k, v in content.items():
+    #     doc += f"""
+    #         {k}:
+    #           type: string
+    #           description: {v}"""
+
     if _type == "array":
       doc += f"""
           items:

@@ -48,3 +48,6 @@ class Base:
 
     # def __del__(self):
     #     print("Destroying object")
+
+    def __getattr__(self, name):
+        return None

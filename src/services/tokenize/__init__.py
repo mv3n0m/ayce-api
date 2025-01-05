@@ -115,3 +115,37 @@ class Tokenize:
 
         response = m(amount)
         return response
+
+
+# tknz = Tokenize({
+#     "uri": "https://api.tokenize-dev.com/public/v1",
+#     "secret_key": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0a3giLCJpZCI6IjUwNzgyRDg4MUJCREEzQTVFNTlFIiwiZXhwIjoxNzI0MTAxNTc5fQ.YcwQpRXo2lVSElhFvCeKhcLlS0ujF8j9Ik3znOOPUdI"
+# })
+
+# print(tknz.get_price())
+
+# # ex = tknz.get_exchange_values(25815.35728803607, "USD", "BTC")
+# # print(ex)
+# # tknz.exchange(ex["_to"]["amount"], "USD", "BTC")
+# # print(tknz.get_price())
+
+# print(tknz.get_balances())
+
+# ex = tknz.get_exchange_values(0.01, "BTC", "USD")
+# print(ex)
+# tknz.exchange(ex["required_amount"], "BTC", "USD")
+
+
+# print(tknz.get_balance("USD"))
+# print(tknz.get_balance("BTC"))
+
+# # print(tknz.buy(1))
+# print(tknz.sell(1))
+
+# print(tknz.get_balance("USD"))
+# print(tknz.get_balance("BTC"))
+
+
+
+# for i in tknz.get_orders("completed", limit=20):
+#     print(i)

@@ -4,6 +4,8 @@ from .base import Base
 class Transaction(Base):
     collection = "trans"
 
+    ## tx_id, from, to, usd_amount, btc_amount, type, transaction_label, reference_id, settlement_id, needs_settlement
+
     @classmethod
     def from_txid(cls, txid):
         return super()._from_query({"txid": txid})
@@ -17,6 +19,7 @@ class Transaction(Base):
         return super()._from_query({"txid": settlement_id})
 
     def update_status(self, status="pending"):
+        # status options: settled, pending, cancelled
         self.push({"status": status})
 
     @property
@@ -30,5 +33,14 @@ class Transaction(Base):
     @property
     def needs_settlement(self):
         return self.status == "pending" and self.needs_settlement
+
+    # need to work on this method, see how a setter works
+    # @property.setter
+    # def needs_settlement(self, value=False):
+    #     value = True
+    #     if self.status != "pending":
+    #         value = False
+
+    #     self.needs_settlement = value
 
 

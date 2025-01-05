@@ -108,6 +108,7 @@ def validate_payouts_record(record):
         raise ValidationError("Invalid payouts record.")
 
     keys = ["address", "amount", "currency", "source_wallet"]
+    print(len(record) - 1)
     if len(keys) != len(record) - 1 or not all((i in record.keys() for i in keys)):
         raise ValidationError("Invalid/Insufficient payouts record attribute/s.")
 

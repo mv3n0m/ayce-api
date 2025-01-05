@@ -37,6 +37,9 @@ class MongoWrapper:
 
         return list(db_response)
 
+    def get_by__id(self, collection, _id, projection=None):
+        return self.get(collection, {"_id": _id}, projection)[0]
+
     def add(self, collection, record):
 
         inserted_id = self.db[collection].insert_one(record).inserted_id
@@ -50,6 +53,7 @@ class MongoWrapper:
         set_values=None,
         unset_values=None,
         inc=None,
+        # array_to_update: tuple=None,
         upsert=False
     ):
         if "_id" in db_query:
@@ -62,6 +66,11 @@ class MongoWrapper:
             values["$unset"] = unset_values
         if inc:
             values["$inc"] = inc
+
+        # look into this later
+        # if array_to_update:
+        #     values["$addToSet"] = {array_to_update[0]: array_to_update[1][0]}
+        #     values["$setOnInsert"] = {array_to_update[0]: array_to_update[1]}
 
         db_response = self.db[collection].update_one(
             db_query or {}, values, upsert=upsert
@@ -81,4 +90,5 @@ def create_indexes(db):
         try:
             db[i].create_index([(k, -1) for k in j], unique=True)
         except Exception as e:  # pylint: disable=broad-except
+            # TODO: replace with log file
             print(f"Failed while creating index at {i} with field {j}: ", e)

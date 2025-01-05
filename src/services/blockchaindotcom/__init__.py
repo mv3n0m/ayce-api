@@ -16,7 +16,7 @@ class BtcApi:
 
         if response.status_code != 200:
             logging.info(f"BlockchainDotCom <amount: {amount} | currency: {currency}> - ERROR_CODE: {response.status_code}")
-            conversion_rate = self.rst._get("conversion_rate")["status"]
+            conversion_rate = self.rst._get("conversion_rate")
 
         return response.json()
 
@@ -25,8 +25,8 @@ class BtcApi:
         if not forced:
             conversion_expiry = self.rst._get("conversion_expiry")
             if "error" not in conversion_expiry:
-                if datetime.now().timestamp() <= float(conversion_expiry["status"]):
-                    conversion_rate = float(self.rst._get("conversion_rate")["status"])
+                if datetime.now().timestamp() <= float(conversion_expiry):
+                    conversion_rate = float(self.rst._get("conversion_rate"))
 
         if not conversion_rate:
             conversion_rate = self.__convert()

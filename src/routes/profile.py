@@ -1,8 +1,8 @@
 from src.settings import mdb
-from .handlers.user import User
 from src.utils import responsify
-from .handlers import create_blueprint
 from src.utils.args_schema import token_args, business_args, billing_args, representative_args, beneficial_args, profile_data_args
+from .handlers.user import User
+from .handlers import create_blueprint
 
 
 bp, route = create_blueprint("user_profile", __name__, "/user/profile")

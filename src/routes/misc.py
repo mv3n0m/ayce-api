@@ -1,9 +1,9 @@
 from flask import request
 from src.settings import btcdc
 from src.utils import responsify
-from .handlers import create_blueprint
 from src.utils.args_schema import invoice_args
 from src.utils.validations import validate_currency
+from .handlers import create_blueprint
 
 bp, route = create_blueprint("misc", __name__)
 

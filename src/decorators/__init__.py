@@ -3,11 +3,11 @@ from .helpers import handle_jwt
 from src.utils import responsify
 
 
-def use_auth(_auth="jwt"):
+def use_auth(_auth="jwt", _identity="False"):
     def decorator(func):
-        def _wrapper(_auth=_auth, *args, **kwargs):
+        def _wrapper(_auth=_auth, _identity=_identity, *args, **kwargs):
             if _auth and _auth.endswith("jwt"):
-                response = handle_jwt(_auth=="_jwt")
+                response = handle_jwt(_identity)
                 if "error" in response[0]:
                     return responsify(*response)
 
@@ -22,10 +22,10 @@ def use_auth(_auth="jwt"):
     return decorator
 
 
-def route_wrapper(bp, use_kwargs, route, methods=["GET"], _args={}, _auth="jwt", *args, **kwargs):
+def route_wrapper(bp, use_kwargs, route, methods=["GET"], _args={}, _auth="jwt", _identity=False, *args, **kwargs):
     def decorator(func):
         @bp.route(route, methods=methods)
-        @use_auth(_auth)
+        @use_auth(_auth, _identity)
         @use_kwargs(_args)
         def _wrapper(*inner_args, **inner_kwargs):
             return func(*inner_args, **inner_kwargs)

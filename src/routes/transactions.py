@@ -3,31 +3,26 @@ import random
 import logging
 import requests
 from uuid import uuid4
-from bson import ObjectId
 from flask import request, Response
 from datetime import datetime, timedelta
+from src.utils import responsify
 from src.services.aws import enqueue_transaction
 from src.settings import btc_node, mdb, rst, tknz, mailer, btcdc
-from src.utils import create_blueprint, responsify, check_jwt_tokens
 from src.utils.args_schema import wallet_name_args, token_args, transaction_args, exchange_args, transfer_args, otp_args, invoice_args, payouts_args, payment_buttons_args
+from .handlers import create_blueprint
 
+bp, route = create_blueprint("transactions", __name__, "/transactions")
 
-bp, use_kwargs = create_blueprint("transactions1", __name__, "/transactions1")
-
-@bp.route("/collect-payment-details", methods=["POST"])
-@use_kwargs(payment_buttons_args)
-def record_payments(*args, **kwargs):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
+@route("/collect-payment-details", ["POST"], payment_buttons_args)
+def record_payments(merchant_id, *args, **kwargs):
 
     token = "pay" + str(uuid4())
     image = kwargs.pop("image", None)
     if image:
         pass
-
+        # s3.push image
+        # update s3_image
+        # use token above to save image name
     now = int(datetime.now().timestamp())
     kwargs.update({
         "payment_token": token,
@@ -41,8 +36,8 @@ def record_payments(*args, **kwargs):
     return responsify({"payment_token": token, "success": "Payment record created."}, 201)
 
 
-@bp.route("/get-payment-details/<payment_token>", methods=["GET"])
-def fetch_collectibles(payment_token):
+@route("/get-payment-details/<payment_token>", ["GET"])
+def fetch_collectibles(merchant_id, payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
@@ -51,21 +46,15 @@ def fetch_collectibles(payment_token):
     return responsify(response, 200)
 
 
-@bp.route("/list-payments", methods=["GET"])
-def list_payments():
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
+@route("/list-payments", ["GET"])
+def list_payments(merchant_id):
     response = mdb.get("payments", {"merchant_id": merchant_id}, {"_id": 0, "merchant_id": 0, "payer_details.updated_at": 0})
 
     return responsify(response, 200)
 
 
-@bp.route("/update-payment-collectibles/<payment_token>", methods=["POST"])
-def update_payment_collectibles(payment_token):
+@route("/update-payment-collectibles/<payment_token>", ["POST"])
+def update_payment_collectibles(merchant_id, payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
@@ -91,20 +80,15 @@ def update_payment_collectibles(payment_token):
     return responsify({"success": "Payment collectibles updated."}, 200)
 
 
-@bp.route("/payouts", methods=["POST"])
-@use_kwargs(payouts_args)
-def record_payouts(records, notes=""):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
+@route("/payouts", ["POST"], payouts_args)
+def record_payouts(merchant_id, records, notes=''):
 
     deductions = {"usd": 0, "btc": 0}
 
-    all_addresses = [user.get("email") for user in mdb.get("merchants", {}, {"email": 1})]
+    all_addresses = [user.get("email") for user in mdb.get("users", {}, {"email": 1})]
 
     for record in records:
+        # check if user with that ayce_id or email exists
         address_type = record.get("address_type", "email").lower()
         address = record.get("address").lower()
         source_wallet = record.get("source_wallet").lower()
@@ -122,8 +106,8 @@ def record_payouts(records, notes=""):
 
         deductions[source_wallet] += amount
 
-    merchant = mdb.get("merchants", mdb_query)[0]
-    balances = merchant.get("balances")
+    merchant = mdb.get_by__id("users", merchant_id)
+    balances = merchant.get("balances", {})
 
     for k, v in deductions.items():
         if balances[k] < v:
@@ -156,23 +140,16 @@ def record_payouts(records, notes=""):
     return responsify(response, 201)
 
 
-@bp.route("/payouts/otp-confirm", methods=["POST"])
-@use_kwargs({ **token_args, **otp_args})
-def confirm_payouts(token, otp):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
-    merchant = mdb.get("merchants", mdb_query)[0]
+@route("/payouts/otp-confirm", ["POST"], { **token_args(), **otp_args})
+def confirm_payouts(merchant_id, token, otp):
+    merchant = mdb.get_by__id("users", merchant_id)
+    # this must be replaced with the email received from jwt
     merchant_email = merchant.get("email")
 
-    payouts = mdb.get("payouts", { "_id": ObjectId(token) })
+    payouts = mdb.get_by__id("payouts", token)
     if not payouts:
         return responsify({"error": "Invalid payouts token."}, 400)
 
-    payouts = payouts[0]
     if payouts.get("merchant_id") != merchant_id:
         return responsify({"error": "Unauthorized"}, 401)
 
@@ -217,15 +194,16 @@ def confirm_payouts(token, otp):
             "status": "confirmed",
         }
 
+        ## this block of code really needs a lot of care
         if address_type in ["ayce_id", "email"]:
             rmdb_query = {record["address_type"]: record["address"]}
             inc_query = {f"balances.btc": btc_amount}
 
-            mdb.alter("merchants", rmdb_query, inc=inc_query)
+            mdb.alter("users", rmdb_query, inc=inc_query)
 
             _id = record["address"]
             if address_type == "email":
-                _id = mdb.get("merchants", rmdb_query)[0]["merchant_id"]
+                _id = mdb.get("users", rmdb_query)[0]["merchant_id"]
 
             transaction.update({
                 "recipient_id": _id
@@ -249,20 +227,13 @@ def confirm_payouts(token, otp):
         mdb.add("transactions", transaction)
 
     merchant_deductions = {f"balances.{k}": -v for k, v in payouts["merchant_deductions"].items()}
-    mdb.alter("merchants", mdb_query, inc=merchant_deductions)
+    mdb.alter("users", mdb_query, inc=merchant_deductions)
 
     return responsify({"success": "Payouts successfully queued."}, 200)
 
 
-@bp.route("/create-invoice", methods=["POST"])
-@use_kwargs(invoice_args)
-def create_invoice(*args, **kwargs):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
+@route("/create-invoice", ["POST"], invoice_args)
+def create_invoice(merchant_id):
     invoice_number = kwargs.get("invoice_number")
 
     invoice_existence = mdb.get("invoices", {"merchant_id": merchant_id, "invoice_number": invoice_number})
@@ -282,11 +253,13 @@ def create_invoice(*args, **kwargs):
 
     mdb.add("invoices", kwargs)
 
+    # the key foe invoice-token must be changed to snake_case wherever possible
     return responsify({"success": "Invoice created successfully.", "invoice-token": invoice_token}, 201)
 
 
-@bp.route("/get-invoice/<invoice_token>", methods=["GET"])
-def get_invoice(invoice_token):
+@route("/get-invoice/<invoice_token>", ["GET"])
+def get_invoice(merchant_id, invoice_token):
+
     invoice = mdb.get("invoices", { "invoice_token": invoice_token }, {"_id": 0 })
     if not invoice:
         return responsify({"error": "Invalid invoice token."}, 400)
@@ -296,7 +269,7 @@ def get_invoice(invoice_token):
         return responsify({"error": f"Invoice already { invoice['status'] }."}, 400)
 
     merchant_id = invoice.pop("merchant_id")
-    merchant = mdb.get("merchants", { "merchant_id": merchant_id })[0]
+    merchant = mdb.get_by__id("users", merchant_id)
 
     invoice["merchant_name"] = merchant.get("username", "")
     invoice["merchant_email"] = merchant.get("email")
@@ -304,26 +277,16 @@ def get_invoice(invoice_token):
     return responsify(invoice, 200)
 
 
-@bp.route("/list-invoices", methods=["GET"])
-def list_invoices():
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
+@route("/list-invoices", ["GET"])
+def list_invoices(merchant_id):
     invoices = mdb.get("invoices", {"merchant_id": merchant_id}, {"_id": 0, "invoice_number": 1, "recipient_name": 1, "due_date": 1, "total_due": 1, "status": 1})
 
     return responsify(invoices, 200)
 
 
-@bp.route("/send-invoice/<invoice_token>", methods=["GET"])
-def send_invoice(invoice_token):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
+@route("/send-invoice/<invoice_token>", ["GET"])
+def send_invoice(merchant_id, invoice_token):
+    # The base UI url must be set in the backend env variable instead of passing as query param here
     args = request.args
     if "invoice_link" not in args:
         return responsify({"error": "invoice_link not provided as query params"}, 400)
@@ -362,14 +325,9 @@ def send_invoice(invoice_token):
     return responsify({"success": "Invoice sent successfully.", "invoice-token": invoice_token}, 200)
 
 
-@bp.route("/cancel-invoice/<invoice_token>", methods=["GET"])
-def cancel_invoice(invoice_token):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
+# also cancel invoices after cancellation date or make it overdue depending on requirement (or the frontend guy can handle overdue)
+@route("/cancel-invoice/<invoice_token>", ["GET"])
+def cancel_invoice(merchant_id, invoice_token):
     invoice = mdb.get("invoices", { "invoice_token": invoice_token })
     if not invoice:
         return responsify({"error": "Invalid invoice token."}, 400)
@@ -386,9 +344,8 @@ def cancel_invoice(invoice_token):
     return responsify({"success": "Invoice cancelled successfully.", "invoice-token": invoice_token}, 200)
 
 
-@bp.route("/create-wallet", methods=["POST"])
-@use_kwargs(wallet_name_args)
-def create_wallet(wallet_name):
+@route("/create-wallet", ["POST"], wallet_name_args)
+def create_wallet(merchant_id, wallet_name):
     status_code, content = btc_node.get_node("on-chain").create_wallet(wallet_name)
 
     if status_code != 200:
@@ -397,9 +354,8 @@ def create_wallet(wallet_name):
     return responsify({"success": f"{wallet_name} wallet created successfully."}, 201)
 
 
-@bp.route("/get-new-address", methods=["POST"])
-@use_kwargs(wallet_name_args)
-def get_new_address(wallet_name):
+@route("/get-new-address", ["POST"], wallet_name_args)
+def get_new_address(merchant_id, wallet_name):
     status_code, content = btc_node.get_node("on-chain").create_new_address(wallet_name)
 
     if status_code != 200:
@@ -408,18 +364,10 @@ def get_new_address(wallet_name):
     return responsify({"wallet_name": wallet_name, "address": content.get("result")}, 201)
 
 
-@bp.route("/pos/create-transaction", methods=["POST"])
-@use_kwargs(transaction_args)
-def create_transaction(amount, description="Ayce POS transaction"):
+@route("/pos/create-transaction", ["POST"], transaction_args)
+def create_transaction(merchant_id, amount, description="Ayce POS transaction"):
+    merchant = mdb.get_by__id("users", merchant_id, {"_id": 0})
 
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant = mdb.get("merchants", mdb_query, {"_id": 0})
-    merchant_id = mdb_query.get('merchant_id')
-
-    merchant = merchant[0]
     balances = merchant.get("balances", {"usd": 0, "btc": 0})
     usd, btc = balances["usd"], balances["btc"]
 
@@ -435,11 +383,13 @@ def create_transaction(amount, description="Ayce POS transaction"):
     now = int(datetime.utcnow().timestamp())
     label = f"{now}m{merchant_id}"
 
+    # # Handle merchant wallet fetcher and creation of transaction data inside this method
     addresses = btc_node.get_payment_addresses({"amount": btc_value, "label": label, "description": description})
 
     if addresses.get("error"):
         return responsify({"error": "Failed to create payment address"}, 400)
 
+    # # what about the value/charges added/deducted from the merchant side, how to show or manage those values
     transaction = {
         "btc_amount": btc_value,
         "usd_amount": amount,
@@ -458,11 +408,10 @@ def create_transaction(amount, description="Ayce POS transaction"):
     return responsify(response, 201)
 
 
-@bp.route("/pos/get-payment-addresses", methods=["POST"])
-@use_kwargs(token_args)
-def get_payment_addresses(token):
+@route("/pos/get-payment-addresses", ["POST"], token_args)
+def get_payment_addresses(merchant_id, token):
 
-    transaction = mdb.get("transactions", {"_id": ObjectId(token)}, {"_id": 0, "type": 0, "merchant_id": 0, "status": 0})
+    transaction = mdb.get("transactions", {"_id": token}, {"_id": 0, "type": 0, "merchant_id": 0, "status": 0})
     if not transaction:
         return responsify({"error": "Incorrect token."}, 400)
 
@@ -481,8 +430,8 @@ def get_payment_addresses(token):
     return responsify(transaction, 200)
 
 
-@bp.route("/pos/settle-invoice")
-def settle_invoice():
+@route("/pos/settle-invoice", _auth=None)
+def settle_invoice(*args, **kwargs):
 
     params = request.args
     transaction_label = params.get("transaction_label")
@@ -499,13 +448,14 @@ def settle_invoice():
     tid, mid = transaction_label.split("m")
 
     mdb_query = {"merchant_id": mid}
-    merchant = mdb.get("merchants", mdb_query)[0]
+    merchant = mdb.get("users", mdb_query)[0]
 
     balances = merchant.get("balances", {"usd": 0, "btc": 0})
     btc_amount = transaction.get("btc_amount", 0)
     transaction_fee = btc_amount * 0.01
 
     if status == "confirmed":
+        # work on something better for these stuff
         if not balances.get("btc"):
             balances["btc"] = 0
         if not balances.get("usd"):
@@ -515,23 +465,27 @@ def settle_invoice():
         if merchant.get("auto_conversion"):
             split_settlement = merchant.get("split_settlement", 0)
             btc_calculated = btc_to_be_settled * (split_settlement / 100)
+            # the conversion rate must match the actual rate of conversion during the time of the transaction's initiation
+            # Also, maybe focus on the ayce's global conversion rate, need to set it in the redis (maybe)
+            # or maybe include conversion_rate with every record (doesn't matter if it's a in-wallet conversion or any other transaction)
             usd_to_be_settled = tknz.get_exchange_values(btc_to_be_settled - btc_calculated, "btc", "usd")
             tknz.exchange(usd_to_be_settled["btc_amount"], "btc", "usd")
             balances["usd"] += usd_to_be_settled["usd_amount"]
             print(usd_to_be_settled["usd_amount"])
             btc_to_be_settled = btc_calculated
 
+        ##### deduct amount depending on the merchant/customer selection and the conversion rate specified ####
         balances["btc"] += btc_to_be_settled
         print(balances)
 
     mdb.alter("transactions", {"transaction_label": transaction_label}, {"status": status, "updated_at": int(datetime.now().timestamp()), "payment_mode": "lightning", "transaction_fee": transaction_fee})
-    mdb.alter("merchants", mdb_query, {"balances": balances})
+    mdb.alter("users", mdb_query, {"balances": balances})
     rst._set(transaction_label, status)
 
     return responsify({}, 200)
 
 
-@bp.route("/pos/payment-status/<transaction_label>")
+@route("/pos/payment-status/<transaction_label>", _auth=None)
 def invoice_status(transaction_label):
     initial_datetime = datetime.now()
     expected_datetime = initial_datetime + timedelta(minutes=11)
@@ -562,11 +516,12 @@ def invoice_status(transaction_label):
     return Response(response, mimetype="text/event-stream")
 
 
-@bp.route("/pos/settle-transaction", methods=["POST"])
-def pos_settle_transaction():
+@route("/pos/settle-transaction", ["POST"], _auth=None)
+def pos_settle_transaction(*args, **kwargs):
     payload = request.json
     address = payload.pop("address", "na")
     amount = payload.pop("amount", 0)
+    ### Need to work on settle transaction for lower amount payments than expected value ###
 
     transaction_id = payload.get("transaction_id")
     if not transaction_id:
@@ -588,7 +543,7 @@ def pos_settle_transaction():
         return responsify({}, 200)
 
     merchant_id = transaction.get("merchant_id")
-    merchant = mdb.get("merchants", {"merchant_id": merchant_id})[0]
+    merchant = mdb.get_by__id("users", merchant_id)
 
     balances = merchant.get("balances", {"usd": 0, "btc": 0})
     if not balances.get("btc"):
@@ -606,36 +561,37 @@ def pos_settle_transaction():
     if merchant.get("auto_conversion"):
         split_settlement = merchant.get("split_settlement", 0)
         btc_calculated = btc_to_be_settled * (split_settlement / 100)
-
+        # the conversion rate must match the actual rate of conversion during the time of the transaction's initiation
+        # Also, maybe focus on the ayce's global conversion rate, need to set it in the redis (maybe)
+        # or maybe include conversion_rate with every record (doesn't matter if it's a in-wallet conversion or any other transaction)
         usd_to_be_settled = tknz.get_exchange_values(btc_to_be_settled - btc_calculated, "btc", "usd")
         tknz.exchange(usd_to_be_settled["btc_amount"], "btc", "usd")
         balances["usd"] += usd_to_be_settled["usd_amount"]
         print(usd_to_be_settled["usd_amount"])
         btc_to_be_settled = btc_calculated
 
+    ##### deduct amount depending on the merchant/customer selection and the conversion rate specified ####
     balances["btc"] += btc_to_be_settled
     print(balances)
 
     status = "confirmed"
 
+    ### A method to expire on-chain transactions within minutes ###
+
     payload.update({"status": status, "updated_at": int(datetime.now().timestamp()), "payment_mode": "on-chain", "transaction_fee": f"{transaction_fee:.8f} BTC"})
     rst._set(label, status)
 
     mdb.alter("transactions", {"on-chain": address}, payload)
-    mdb.alter("merchants", {"merchant_id": merchant_id}, {"balances": balances})
+    mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
     return responsify({}, 200)
 
 
-@bp.route("/exchange/get-conversion-rate", methods=["POST"])
-@use_kwargs(exchange_args)
-def get_exchange_conversion_rate(amount, _from, _to, description="In-wallet conversion"):
-    mdb_query = {"merchant_id": '12'}
-    db_response = mdb.get("merchants", mdb_query, {"_id": 0})
-    merchant_id = mdb_query.get('merchant_id')
+@route("/exchange/get-conversion-rate", ["POST"], exchange_args)
+def get_exchange_conversion_rate(merchant_id, amount, _from, _to, description="In-wallet conversion"):
+    merchant = mdb.get_by__id("users", merchant_id, {"_id": 0})
 
-    db_response = db_response[0]
-    balances = db_response.get("balances", {"usd": 0, "btc": 0})
+    balances = merchant.get("balances", {"usd": 0, "btc": 0})
 
     response = tknz.get_exchange_values(amount, _from, _to)
     if response.get("error"):
@@ -669,21 +625,14 @@ def get_exchange_conversion_rate(amount, _from, _to, description="In-wallet conv
 
     inserted_id = mdb.add("transactions", transaction)
     response = {"token": str(inserted_id), **response}
-    mdb.alter("merchants", mdb_query, {"balances": balances})
+    mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
     return responsify(response, 201)
 
 
-@bp.route("/exchange/refresh-conversion-rate", methods=["POST"])
-@use_kwargs(token_args)
-def refresh_exchange_rate(token):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
-    transaction = mdb.get("transactions", {"_id": ObjectId(token)})
+@route("/exchange/refresh-conversion-rate", ["POST"], token_args)
+def refresh_exchange_rate(merchant_id, token):
+    transaction = mdb.get("transactions", {"_id": token})
     if not transaction:
         return responsify({"error": "Invalid token."}, 400)
     transaction = transaction[0]
@@ -691,8 +640,7 @@ def refresh_exchange_rate(token):
     if transaction.get("merchant_id") != merchant_id:
         return responsify({"error": "Incorrect token."}, 400)
 
-    db_response = mdb.get("merchants", mdb_query, {"_id": 0})
-    db_response = db_response[0]
+    db_response = mdb.get_by__id("users", merchant_id, {"_id": 0})
     balances = db_response.get("balances", {"usd": 0, "btc": 0})
 
     on_hold = transaction.get("on_hold")
@@ -722,23 +670,16 @@ def refresh_exchange_rate(token):
         **response
     }
 
-    mdb.alter("transactions", {"_id": ObjectId(token)}, transaction)
+    mdb.alter("transactions", {"_id": token}, transaction)
     response = {"token": token, **response}
-    mdb.alter("merchants", mdb_query, {"balances": balances})
+    mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
     return responsify(transaction, 201)
 
 
-@bp.route("/exchange/confirm", methods=["POST"])
-@use_kwargs(token_args)
-def exchange_currencies(token):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
-
-    merchant_id = mdb_query.get('merchant_id')
-
-    transaction = mdb.get("transactions", {"_id": ObjectId(token)})
+@route("/exchange/confirm", ["POST"], token_args)
+def exchange_currencies(merchant_id, token):
+    transaction = mdb.get("transactions", {"_id": token})
     if not transaction:
         return responsify({"error": "Invalid token."}, 400)
     transaction = transaction[0]
@@ -746,8 +687,7 @@ def exchange_currencies(token):
     if transaction.get("merchant_id") != merchant_id:
         return responsify({"error": "Incorrect token."}, 400)
 
-    db_response = mdb.get("merchants", mdb_query, {"_id": 0})
-    db_response = db_response[0]
+    db_response = mdb.get_by__id("users", merchant_id, {"_id": 0})
     balances = db_response.get("balances", {"usd": 0, "btc": 0})
 
     on_hold = transaction.get("on_hold")
@@ -755,8 +695,9 @@ def exchange_currencies(token):
         return responsify({"error": "Incorrect transaction."}, 400)
 
     if transaction.get("expiry") < datetime.now().timestamp():
+        # revert back the balance to the merchant
         balances[on_hold["currency"]] += balances[on_hold["amount"]]
-        mdb.alter("merchants", mdb_query, {"balances": balances})
+        mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
         return responsify({"error": "Expired transaction"}, 400)
 
@@ -772,29 +713,23 @@ def exchange_currencies(token):
 
     balances[_to["currency"]] += _to["amount"]
 
-    mdb.alter("transactions", {"_id": ObjectId(token)}, {"status": "confirmed", "updated_at": int(datetime.now().timestamp())}, {"on_hold": 0})
-    mdb.alter("merchants", mdb_query, {"balances": balances})
+    mdb.alter("transactions", {"_id": token}, {"status": "confirmed", "updated_at": int(datetime.now().timestamp())}, {"on_hold": 0})
+    mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
     return responsify({"success": f"Exchanged { _from['amount'] } { _from['currency'].upper() } to { _to['amount'] } { _to['currency'].upper() }."}, 200)
 
 
-@bp.route("/transfer-btc", methods=["POST"])
-@use_kwargs(transfer_args)
-def transfer_btc(amount, address, description="BTC Transfer", _type="transfer"):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
+@route("/transfer-btc", ["POST"], transfer_args)
+def transfer_btc(merchant_id, amount, address, description="BTC Transfer", _type="transfer"):
 
-    db_response = mdb.get("merchants", mdb_query, {"_id": 0})
-    merchant_id = mdb_query.get('merchant_id')
-
-    db_response = db_response[0]
+    db_response = mdb.get_by__id("users", merchant_id, {"_id": 0})
     balances = db_response.get("balances", {"usd": 0, "btc": 0})
 
     required_amount = amount * 1.01
     if balances.get("btc", 0) < required_amount:
         return responsify({"error": f"Insufficient BTC balance"}, 400)
 
+    # check for master balance in node
     now = int(datetime.now().timestamp())
     label = f"{now}m{merchant_id}"
 
@@ -835,16 +770,10 @@ def transfer_btc(amount, address, description="BTC Transfer", _type="transfer"):
     return responsify(response, 201)
 
 
-@bp.route("/transfer/otp-confirm", methods=["POST"])
-@use_kwargs({ **token_args, **otp_args})
-def confirm_otp(token, otp):
-    mdb_query = check_jwt_tokens(request)
-    if "error" in mdb_query:
-        return responsify(mdb_query, 401)
+@route("/transfer/otp-confirm", ["POST"], { **token_args(), **otp_args})
+def confirm_otp(merchant_id, token, otp):
 
-    merchant_id = mdb_query.get('merchant_id')
-
-    transaction = mdb.get("transactions", {"_id": ObjectId(token)})
+    transaction = mdb.get("transactions", {"_id": token})
     if not transaction:
         return responsify({"error": "Invalid token."}, 400)
     transaction = transaction[0]
@@ -852,8 +781,7 @@ def confirm_otp(token, otp):
     if transaction.get("merchant_id") != merchant_id:
         return responsify({"error": "Incorrect token."}, 400)
 
-    db_response = mdb.get("merchants", mdb_query, {"_id": 0})
-    db_response = db_response[0]
+    db_response = mdb.get_by__id("users", merchant_id, {"_id": 0})
     balances = db_response.get("balances", {"usd": 0, "btc": 0})
     on_hold = transaction.get("on_hold")
     if not on_hold:
@@ -889,7 +817,16 @@ def confirm_otp(token, otp):
         "blockExplorer": blockExplorer
     }
 
-    mdb.alter("transactions", {"_id": ObjectId(token)}, tx, {"on_hold": 0})
-    mdb.alter("merchants", mdb_query, {"balances": balances})
+    mdb.alter("transactions", {"_id": token}, tx, {"on_hold": 0})
+    mdb.alter("users", {"_id": merchant_id}, {"balances": balances})
 
     return responsify({"success": f"Transferred { transaction.get('btc_amount') } BTC to { transaction.get('receiver') }."}, 200)
+
+
+# Write a separete logic to check and update tokenize fulfilled orders
+# Work on withdraw / transfer flow
+# Write logs wherever possible
+# Work on partial transactions
+# Do check insufficient balances in master wallets as well, on-chain, lightning nodes as well as tokenize account
+# lightning invoices expire in around 40 seconds
+# make similar functionality to hold balance in all places (either deduct from all places or do not deduct but calculate (actual balance + on_hold for next transaction))

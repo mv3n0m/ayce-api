@@ -31,6 +31,8 @@ class User(Base):
             _user = super().create(_user)
         except DuplicateKeyError as e:
             err_msg = f"User with email: {email} already exists."
+            # Maybe later on create a logger class for proper flexibility and options
+            # Or maybe use the logging library itself for proper validation
             logging.info(f"{e.__class__.__name__} -> {err_msg}\n\t{e.details['errmsg']}")
             return {"error": err_msg}, 400
         except Exception as e:
@@ -56,6 +58,7 @@ class User(Base):
             print(e)
             return {"error": "Failed to send verification email."}, 500
 
+        print('token', token, user_id)
         rst._set(token, user_id)
 
         return {"success": "Verfication link sent to the user's email address."}, 201
@@ -95,6 +98,7 @@ class User(Base):
     def login(cls, email, password, account_type="business"):
         email = email.lower()
         account_type = account_type.lower()
+        # Later on maybe need to work on account_type for same user/email
         try:
             _user = super()._from_query({"email": email})
         except ValueError as e:
@@ -104,6 +108,8 @@ class User(Base):
             logging.info(f"{e}")
             return {"error": "Unable to fetch user."}, 500
 
+        # setting password must occur after verification email
+        # So this will be checked after verfified status below
         if not check_password_hash(_user.password, password):
             return {"error": "Incorrect password."}, 400
 
@@ -118,6 +124,8 @@ class User(Base):
 
         payload = {"_pk": _user._pk, "account_type": account_type}
         access_token = create_access_token(payload)
+        # store and get secret key as env variables
+        # as well as frontend url store as environment variable
 
         return {"success": "Login successful.", "access_token": access_token, "account_type": account_type}, 200
 
