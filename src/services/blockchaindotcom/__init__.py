@@ -23,10 +23,13 @@ class BtcApi:
     def convert(self, amount=None, currency=None, forced=False):
         conversion_rate = None
         if not forced:
-            conversion_expiry = self.rst._get("conversion_expiry")
-            if "error" not in conversion_expiry:
-                if datetime.now().timestamp() <= float(conversion_expiry):
-                    conversion_rate = float(self.rst._get("conversion_rate"))
+            try:
+                conversion_expiry = self.rst._get("conversion_expiry")
+                if "error" not in conversion_expiry:
+                    if datetime.now().timestamp() <= float(conversion_expiry):
+                        conversion_rate = float(self.rst._get("conversion_rate"))
+            except:
+                pass
 
         if not conversion_rate:
             conversion_rate = self.__convert()
