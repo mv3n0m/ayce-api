@@ -108,6 +108,9 @@ class User(Base):
             logging.info(f"{e}")
             return {"error": "Unable to fetch user."}, 500
 
+        if account_type == "admin" and  _user.account_type != "admin":
+            return {"error": "Unauthorized"}, 401
+
         # setting password must occur after verification email
         # So this will be checked after verfified status below
         if not check_password_hash(_user.password, password):

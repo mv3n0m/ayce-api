@@ -18,7 +18,7 @@ class MongoWrapper:
     def get(
         self,
         collection,
-        db_query=None,
+        db_query={},
         projection=None,
         limit=None,
         distinct=None,
