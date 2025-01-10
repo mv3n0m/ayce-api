@@ -15,7 +15,7 @@ class BtcApi:
         response = requests.get(url, params=params)
 
         if response.status_code != 200:
-            logging.info(f"BlockchainDotCom <amount: {amount} | currency: {currency}> - ERROR_CODE: {response.status_code}")
+            logging.info(f"BlockchainDotCom <amount: {params['value']} | currency: {params['currency']}> - ERROR_CODE: {response.status_code}")
             conversion_rate = self.rst._get("conversion_rate")
 
         return response.json()

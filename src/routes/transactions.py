@@ -227,13 +227,13 @@ def confirm_payouts(merchant_id, token, otp):
         mdb.add("transactions", transaction)
 
     merchant_deductions = {f"balances.{k}": -v for k, v in payouts["merchant_deductions"].items()}
-    mdb.alter("users", mdb_query, inc=merchant_deductions)
+    mdb.alter("users", {"_id": merchant_id}, inc=merchant_deductions)
 
     return responsify({"success": "Payouts successfully queued."}, 200)
 
 
 @route("/create-invoice", ["POST"], invoice_args)
-def create_invoice(merchant_id):
+def create_invoice(merchant_id, *args, **kwargs):
     invoice_number = kwargs.get("invoice_number")
 
     invoice_existence = mdb.get("invoices", {"merchant_id": merchant_id, "invoice_number": invoice_number})

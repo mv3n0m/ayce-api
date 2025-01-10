@@ -5,7 +5,7 @@ from webargs import ValidationError
 
 
 def validate_account_type(account):
-    options = ["personal", "business"]
+    options = ["personal", "business", "admin"]
     if account.lower() not in options:
         raise ValidationError(f"Invalid account type. Available options: {options}")
 
