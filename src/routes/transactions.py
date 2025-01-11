@@ -203,7 +203,7 @@ def confirm_payouts(merchant_id, token, otp):
                 _id = mdb.get("users", rmdb_query)[0]["_id"]
 
             transaction.update({
-                "recipient_id": _id
+                "recipient_id": str(_id)
             })
         else:
             status_code, content = btc_node.transfer(btc_amount, address)
