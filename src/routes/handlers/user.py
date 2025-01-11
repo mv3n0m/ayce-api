@@ -136,7 +136,7 @@ class User(Base):
     @classmethod
     def reset_request(cls, email):
         email = email.lower()
-        account_type = account_type.lower()
+
         try:
             _user = super()._from_query({"email": email})
         except ValueError as e:
