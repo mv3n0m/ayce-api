@@ -58,7 +58,10 @@ transfer_args = {
 # }
 
 token_args = lambda key="token": {
-    key: fields.Str(required=True, validate=validate_token)
+    # revert to validation with a new validator lambda function that depends on the key
+    # key: fields.Str(required=True, validate=validate_token)
+
+    key: fields.Str(required=True)
 }
 
 otp_args = {

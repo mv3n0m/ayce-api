@@ -85,7 +85,7 @@ def record_payouts(merchant_id, records, notes=''):
 
     deductions = {"usd": 0, "btc": 0}
 
-    all_addresses = [user.get("email") for user in mdb.get("users", {}, {"email": 1})]
+    all_addresses = [user.get("email") for user in mdb.get("users")]
 
     for record in records:
         # check if user with that ayce_id or email exists
@@ -135,7 +135,7 @@ def record_payouts(merchant_id, records, notes=''):
         return responsify({"error": "Failed to send payouts confirmation email."}, 500)
 
     rst._set(token, otp)
-    response = {"token": token, "success": "OTP sent to mechant's email."}
+    response = {"token": token, "success": "OTP sent to merchant's email.", "totp": otp}
 
     return responsify(response, 201)
 
@@ -153,11 +153,8 @@ def confirm_payouts(merchant_id, token, otp):
     if payouts.get("merchant_id") != merchant_id:
         return responsify({"error": "Unauthorized"}, 401)
 
-    _status = rst._get(token)
-    if _status.get("error"):
-        return responsify({"error": "Unable to confirm OTP."}, 400)
+    status = rst._get(token)
 
-    status = _status.get("status")
     if not status or status == 'None':
         return responsify({"error": "Unable to confirm OTP."}, 400)
 
@@ -203,7 +200,7 @@ def confirm_payouts(merchant_id, token, otp):
 
             _id = record["address"]
             if address_type == "email":
-                _id = mdb.get("users", rmdb_query)[0]["merchant_id"]
+                _id = mdb.get("users", rmdb_query)[0]["_id"]
 
             transaction.update({
                 "recipient_id": _id
