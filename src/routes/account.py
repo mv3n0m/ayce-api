@@ -94,22 +94,24 @@ def scheduled_transfers_confirm(merchant, token, otp):
 
 @route("/get-transactions")
 def get_transactions(merchant_id):
-    _query = {
-      "$or": [
-        {"merchant_id": merchant_id},
-        {"recipient_id": merchant_id}
-      ],
-      "status": {"$ne": "expired"}
-    }
+	_query = {
+		"$or": [
+		{"merchant_id": merchant_id},
+		{"recipient_id": merchant_id}
+		],
+		"status": {"$ne": "expired"}
+	}
 
     # give transactions in descending order of date initiated
-    response = mdb.get("transactions", _query, {"_id": 0, "on_hold": 0})
+	response = mdb.get("transactions", _query, {"_id": 0, "on_hold": 0})
 
-    for r in response:
-      if r.get("recipient_id") == merchant_id:
-        r["type"] = "receive"
+	for r in response:
+		if r.get("recipient_id") == merchant_id:
+			r["type"] = "receive"
+		r["mechant_id"] = str(r.get("merchant_id", ""))
+		r["recipient_id"] = str(r.get("recipient_id", ""))
 
-    return responsify({"transactions": response}, 200)
+	return responsify({"transactions": response}, 200)
 
 
 @route("/get-balances", _identity=True)
