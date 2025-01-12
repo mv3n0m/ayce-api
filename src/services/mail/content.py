@@ -1,5 +1,8 @@
+import os
 
 def mail_content(mail_type="otp", name="", payload={}):
+
+    frontend = os.environ.get("FRONTEND_APP", "http://127.0.0.1:3000")
 
     contents = {
         "email verification": {
@@ -12,7 +15,7 @@ def mail_content(mail_type="otp", name="", payload={}):
                 <a href={url} target="_blank">{url}</a>
                 <br>
                 <i>In case of any discrepancy kindly contact support.</i>
-            """.format(name=name, url=f"http://127.0.0.1:3000/verify-user?token={payload.get('token')}")
+            """.format(name=name, url=f"{frontend}/verify-user?token={payload.get('token')}")
         },
         "password reset": {
             "subject": "Email Verification",
@@ -24,7 +27,7 @@ def mail_content(mail_type="otp", name="", payload={}):
                 <a href={url} target="_blank">{url}</a>
                 <br>
                 <i>In case of any discrepancy kindly contact support.</i>
-            """.format(name=name, url=f"http://127.0.0.1:3000/reset-password?token={payload.get('token')}")
+            """.format(name=name, url=f"{frontend}/reset-password?token={payload.get('token')}")
         },
         "otp": {
             "subject": "OTP Verification",
