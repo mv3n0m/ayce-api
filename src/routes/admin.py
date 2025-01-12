@@ -23,7 +23,7 @@ def stats(_user):
 
     currency = request.args.get("currency", "usd").lower()
     if (currency not in ["usd", "btc"]):
-        return responsify({"error": f"Invalid currency. Available options: {["usd", "btc"]}"}, 400)
+        return responsify({"error": f"Invalid currency. Available options: {['usd', 'btc']}"}, 400)
 
     one_year_ago = datetime.now() - timedelta(days=366)
     unix_timestamp_one_year_ago = int(one_year_ago.timestamp())
@@ -48,7 +48,7 @@ def stats(_user):
     _transactions =  {
         "daily": sum(map(lambda _transaction: _transaction["usd_amount"], per_day_transactions)),
         "weekly": sum(map(lambda _transaction: _transaction["usd_amount"], per_week_transactions)),
-        "montly": sum(map(lambda _transaction: _transaction["usd_amount"], per_month_transactions)),
+        "monthly": sum(map(lambda _transaction: _transaction["usd_amount"], per_month_transactions)),
         "yearly": sum(map(lambda _transaction: _transaction["usd_amount"], transactions)),
     }
 
