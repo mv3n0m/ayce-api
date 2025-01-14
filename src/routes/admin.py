@@ -1,7 +1,7 @@
 from .handlers import create_blueprint
 from .handlers.user import User
 from src.utils import responsify
-from src.utils.args_schema import token_args, auth_args, email_args, password_args
+from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args
 from src.settings import mdb, btcdc
 from datetime import datetime, timedelta
 from flask import request
@@ -15,15 +15,11 @@ def admin_login(*args, **kwargs):
         return responsify({"error": "Invalid account_type"}, )
     return responsify(*User.login(account_type="admin", **kwargs))
 
-@route('/stats', _identity=True)
-def stats(_user):
+@route('/stats', _identity=True, _args=currency_args)
+def stats(_user, currency="usd"):
 
     if (_user.account_type != "admin"):
         return responsify({"error": "Unauthorized"}, 401)
-
-    currency = request.args.get("currency", "usd").lower()
-    if (currency not in ["usd", "btc"]):
-        return responsify({"error": f"Invalid currency. Available options: {['usd', 'btc']}"}, 400)
 
     one_year_ago = datetime.now() - timedelta(days=366)
     unix_timestamp_one_year_ago = int(one_year_ago.timestamp())
@@ -32,7 +28,7 @@ def stats(_user):
     unix_timestamp_one_week_ago = int(one_week_ago.timestamp())
 
     one_month_ago = datetime.now() - timedelta(days=30)
-    unix_timestamp_one_month_ago = int(one_month_ago.timestamp())    
+    unix_timestamp_one_month_ago = int(one_month_ago.timestamp())
 
     one_day_ago = datetime.now() - timedelta(hours=24)
     unix_timestamp_one_day_ago = int(one_day_ago.timestamp())

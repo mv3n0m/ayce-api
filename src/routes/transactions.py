@@ -124,7 +124,7 @@ def record_payouts(merchant_id, records, notes=''):
             "email": merchant.get("email"),
             "payload": {
                 "otp": otp,
-                "company_name": "{Mechant's company name}",
+                "company_name": "{Merchant's company name}",
                 "contact_information": "{Merchant's company information}",
                 # "creation_date": str(datetime.fromtimestamp(invoice.get("created_at"))).split(" ")[0]
             }

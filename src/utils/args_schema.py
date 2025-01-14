@@ -236,3 +236,7 @@ beneficial_args = {
 profile_data_args = {
     "fields": fields.List(fields.Str(required=False, validate=validate_profile_data_field), required=False)
 }
+
+currency_args = {
+    "currency": fields.Str(required=False, default="usd", validate=validate_currency)
+}

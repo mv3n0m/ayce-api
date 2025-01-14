@@ -58,7 +58,6 @@ class User(Base):
             print(e)
             return {"error": "Failed to send verification email."}, 500
 
-        print('token', token, user_id)
         rst._set(token, user_id)
 
         return {"success": "Verfication link sent to the user's email address."}, 201
