@@ -2,7 +2,7 @@ import re
 from uuid import UUID
 from bson import ObjectId
 from webargs import ValidationError
-
+from bitcoinlib.keys import Address
 
 def validate_account_type(account):
     options = ["personal", "business", "admin"]
@@ -102,7 +102,7 @@ def validate_due(due):
     if not isinstance(due.get("amount"), (float, int)):
         raise ValidationError("Invalid amount value.")
 
-
+email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 def validate_payouts_record(record):
     if not record:
         raise ValidationError("Invalid payouts record.")
@@ -113,9 +113,6 @@ def validate_payouts_record(record):
         raise ValidationError("Invalid/Insufficient payouts record attribute/s.")
 
     errors = []
-    if not isinstance(record.get("address"), str):
-        errors.append("Address must be of string type.")
-
     if not isinstance(record.get("amount"), (float, int)):
         errors.append("Amount must be of number type.")
 
@@ -129,11 +126,22 @@ def validate_payouts_record(record):
     elif record.get("source_wallet").lower() not in ["btc", "usd"]:
         errors.append("Invalid source_wallet.")
 
-    if record.get("address_type"):
-        if not isinstance(record.get("address_type"), str):
-            errors.append("Address type must be of string type.")
-        elif record.get("address_type").lower() not in ["email", "btc_onchain"]: #, "ayce_id", "btc_lightning"]:
-            errors.append("Invalid address_type.")
+    address = record.get("address")
+    if not isinstance(address, str):
+        errors.append("Address must be of string type.")
+
+    address_type = record.get("address_type", "email").lower()
+    if not isinstance(address_type, str):
+        errors.append("Address type must be of string type.")
+    elif address_type not in ["email", "btc_onchain"]: #, "ayce_id", "btc_lightning"]:
+        errors.append("Invalid address_type.")
+    elif address_type == "email" and not re.match(email_regex, address):
+        errors.append(f"Invalid email address: {address}")
+    elif address_type == "btc_onchain":
+        try:
+            Address.parse(address)
+        except Exception as e:
+            errors.append(f'Invalid BTC onchain address: {address}')
 
     if errors:
         raise ValidationError("Invalid payouts detail/s:  {}".format('\n'.join([e for e in errors])))

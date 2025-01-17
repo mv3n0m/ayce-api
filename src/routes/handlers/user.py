@@ -60,7 +60,7 @@ class User(Base):
 
         rst._set(token, user_id)
 
-        return {"success": "Verfication link sent to the user's email address."}, 201
+        return {"success": "Verification link sent to the user's email address."}, 201
 
 
     @classmethod
@@ -72,8 +72,6 @@ class User(Base):
 
         if not value or value == 'None':
             return {"error": "Invalid token."}, 400
-
-        rst._del(token)
 
         try:
             _user = super()._from_query({"_id": value})

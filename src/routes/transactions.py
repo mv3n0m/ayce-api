@@ -83,9 +83,10 @@ def update_payment_collectibles(merchant_id, payment_token):
 @route("/payouts", ["POST"], payouts_args)
 def record_payouts(merchant_id, records, notes=''):
 
-    deductions = {"usd": 0, "btc": 0}
-
+    merchant = mdb.get_by__id("users", merchant_id)
     all_addresses = [user.get("email") for user in mdb.get("users")]
+
+    deductions = {"usd": 0, "btc": 0}
 
     for record in records:
         # check if user with that ayce_id or email exists
@@ -95,8 +96,12 @@ def record_payouts(merchant_id, records, notes=''):
         currency = record.get("currency").lower()
         amount = record.get("amount")
 
-        if address_type == "email" and address not in all_addresses:
-            return responsify({"error": f"No user found with email: {address}"})
+        if address_type == "email":
+            if address not in all_addresses:
+                return responsify({"error": f"No user found with email: {address}"}, 400)
+
+            if address == merchant.get("email").lower():
+                return responsify({"error": "Cannot pay to self"}, 400)
 
         if currency != source_wallet:
             amount = float(btcdc.convert(amount, currency)["_to"]["amount"])
@@ -106,7 +111,6 @@ def record_payouts(merchant_id, records, notes=''):
 
         deductions[source_wallet] += amount
 
-    merchant = mdb.get_by__id("users", merchant_id)
     balances = merchant.get("balances", {})
 
     for k, v in deductions.items():
@@ -140,7 +144,40 @@ def record_payouts(merchant_id, records, notes=''):
     return responsify(response, 201)
 
 
-@route("/payouts/otp-confirm", ["POST"], { **token_args(), **otp_args})
+@route("/payouts/resend-otp", ["POST"], token_args())
+def resend_payouts_otp(merchant_id, token):
+
+    status = rst._get(token)
+
+    if not status or status == 'None':
+        return responsify({"error": "Unable to confirm OTP."}, 400)
+
+    merchant = mdb.get_by__id("users", merchant_id)
+    otp = str(random.randrange(100000, 1000000))
+
+    try:
+        data = {
+            "mail_type": "payouts",
+            "name": merchant.get("username", "User"),
+            "email": merchant.get("email"),
+            "payload": {
+                "otp": otp,
+                "company_name": "{Merchant's company name}",
+                "contact_information": "{Merchant's company information}",
+            }
+        }
+        mailer.send(data)
+    except Exception as e:
+        print(e)
+        return responsify({"error": "Failed to resend payouts confirmation email."}, 500)
+
+    rst._set(token, otp)
+    response = {"token": token, "success": "OTP resent to merchant's email.", "totp": otp}
+
+    return responsify(response, 200)
+
+
+@route("/payouts/confirm", ["POST"], { **token_args(), **otp_args})
 def confirm_payouts(merchant_id, token, otp):
     merchant = mdb.get_by__id("users", merchant_id)
     # this must be replaced with the email received from jwt
