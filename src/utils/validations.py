@@ -53,8 +53,11 @@ def validate_transfer_type(value):
         raise ValidationError(f"Invalid transfer type. Available options: {options}")
 
 
-def validate_address(addr):
-    pass
+def validate_address(address):
+    try:
+        Address.parse(address)
+    except Exception as e:
+        raise ValidationError(f'Invalid BTC onchain address: {address}')
 
 def validate_otp(otp):
     if len(otp) != 6:

@@ -7,7 +7,7 @@ from flask import request, Response
 from datetime import datetime, timedelta
 from src.utils import responsify
 from src.services.aws import enqueue_transaction
-from src.settings import btc_node, mdb, rst, tknz, mailer, btcdc
+from src.settings import btc_node, mdb, rst, tknz, mailer, btcdc, BTC_ONCHAIN_NETWORK
 from src.utils.args_schema import wallet_name_args, token_args, transaction_args, exchange_args, transfer_args, otp_args, invoice_args, payouts_args, payment_buttons_args
 from .handlers import create_blueprint
 
@@ -621,7 +621,7 @@ def pos_settle_transaction(*args, **kwargs):
     return responsify({}, 200)
 
 
-@route("/exchange/get-conversion-rate", ["POST"], exchange_args)
+@route("/exchange/initiate", ["POST"], exchange_args)
 def get_exchange_conversion_rate(merchant_id, amount, _from, _to, description="In-wallet conversion"):
     merchant = mdb.get_by__id("users", merchant_id, {"_id": 0})
 
@@ -711,7 +711,7 @@ def refresh_exchange_rate(merchant_id, token):
     return responsify(transaction, 201)
 
 
-@route("/exchange/confirm", ["POST"], token_args)
+@route("/exchange/confirm", ["POST"], token_args())
 def exchange_currencies(merchant_id, token):
     transaction = mdb.get("transactions", {"_id": token})
     if not transaction:
@@ -753,7 +753,7 @@ def exchange_currencies(merchant_id, token):
     return responsify({"success": f"Exchanged { _from['amount'] } { _from['currency'].upper() } to { _to['amount'] } { _to['currency'].upper() }."}, 200)
 
 
-@route("/transfer-btc", ["POST"], transfer_args)
+@route("/transfer/btc", ["POST"], transfer_args)
 def transfer_btc(merchant_id, amount, address, description="BTC Transfer", _type="transfer"):
 
     db_response = mdb.get_by__id("users", merchant_id, {"_id": 0})
@@ -799,12 +799,12 @@ def transfer_btc(merchant_id, amount, address, description="BTC Transfer", _type
     inserted_id = mdb.add("transactions", transaction)
     rst._set(label, otp)
 
-    response = {"token": str(inserted_id), "success": "OTP sent to mechant's email."}
+    response = {"token": str(inserted_id), "success": "OTP sent to merchant's email."}
 
     return responsify(response, 201)
 
 
-@route("/transfer/otp-confirm", ["POST"], { **token_args(), **otp_args})
+@route("/transfer/confirm", ["POST"], { **token_args(), **otp_args})
 def confirm_otp(merchant_id, token, otp):
 
     transaction = mdb.get("transactions", {"_id": token})
@@ -823,11 +823,7 @@ def confirm_otp(merchant_id, token, otp):
 
     transaction_label = transaction.get("transaction_label")
 
-    _status = rst._get(transaction_label)
-    if _status.get("error"):
-        return responsify({"error": "Unable to confirm OTP."}, 400)
-
-    status = _status.get("status")
+    status = rst._get(transaction_label)
     if not status or status == 'None':
         return responsify({"error": "Unable to confirm OTP."}, 400)
 
@@ -841,11 +837,12 @@ def confirm_otp(merchant_id, token, otp):
         return responsify({"error": "Failed to transfer BTC"}, 500)
 
     transaction_id = content.get("result")
-    blockExplorer = f"https://blockstream.info/testnet/tx/{transaction_id}"
+    blockExplorer = f"https://blockstream.info/{BTC_ONCHAIN_NETWORK}/tx/{transaction_id}"
 
     balances[on_hold["currency"]] -= on_hold["amount"]
     tx = {
         "updated_at": int(datetime.now().timestamp()),
+        # TODO: need to check status using a callback from node
         "status": "confirmed",
         "transaction_id": transaction_id,
         "blockExplorer": blockExplorer

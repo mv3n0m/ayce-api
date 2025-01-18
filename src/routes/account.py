@@ -71,7 +71,7 @@ def scheduled_transfers(merchant):
 	return responsify({"success": "OTP sent to user's email.", "token": token}, 200)
 
 
-@route("/scheduled-transfers/otp-confirm", ["POST", "GET"], { **token_args(), **otp_args}, _identity=True)
+@route("/scheduled-transfers/confirm", ["POST", "GET"], { **token_args(), **otp_args}, _identity=True)
 def scheduled_transfers_confirm(merchant, token, otp):
 	_status = rst._get(token)
 	if _status.get("error"):
@@ -87,7 +87,6 @@ def scheduled_transfers_confirm(merchant, token, otp):
 	rst._del(token)
 
 	mdb.alter("users", {"_id", merchant._id}, {"schedules.status": "confirmed"})
-	print("completed")
 
 	return responsify({"success": "Scheduled transfers states updated."}, 200)
 
