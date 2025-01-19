@@ -68,16 +68,39 @@ def scheduled_transfers(merchant):
 	rst._set(token, otp)
 	mdb.alter("users", {"_id": token}, {"schedules": {"status": "pending", **request_json}})
 
-	return responsify({"success": "OTP sent to user's email.", "token": token}, 200)
+	return responsify({"success": "OTP sent to merchant's email.", "token": token}, 200)
 
 
-@route("/scheduled-transfers/confirm", ["POST", "GET"], { **token_args(), **otp_args}, _identity=True)
+@route("/scheduled-transfers/resend-otp", ["POST"], token_args(), _identity=True)
+def scheduled_transfers_resend(merchant, token):
+	otp = str(random.randrange(100000, 1000000))
+
+	try:
+		data = {
+			"mail_type": "scheduled transfers",
+			"name": merchant.username or "User",
+			"email": merchant.email,
+			"payload": {
+				"otp": otp,
+				"company_name": "{Mechant's company name}",
+				"contact_information": "{Merchant's company information}",
+				# "creation_date": str(datetime.fromtimestamp(invoice.get("created_at"))).split(" ")[0]
+			}
+		}
+		mailer.send(data)
+	except Exception as e:
+		print(e)
+		return responsify({"error": "Failed to send scheduled transfer updated confirmation email."}, 500)
+
+	rst._set(token, otp)
+
+	return responsify({"success": "OTP resent to merchant's email."}, 200)
+
+
+@route("/scheduled-transfers/confirm", ["POST"], { **token_args(), **otp_args}, _identity=True)
 def scheduled_transfers_confirm(merchant, token, otp):
-	_status = rst._get(token)
-	if _status.get("error"):
-		return responsify({"error": "Unable to confirm OTP."}, 400)
+	status = rst._get(token)
 
-	status = _status.get("status")
 	if not status or status == 'None':
 		return responsify({"error": "Unable to confirm OTP."}, 400)
 
