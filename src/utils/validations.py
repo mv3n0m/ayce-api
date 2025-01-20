@@ -222,3 +222,10 @@ def validate_profile_data_field(field):
 
     if field not in options:
         raise ValidationError(f"Invalid account data field. Available options: {options}")
+
+
+def validate_scheduled_transfers_period(value):
+    options = ["off", "daily", "weekly"]
+
+    if value not in options:
+        raise ValidationError(f"Invalid value for scheduled trasnfers period. Available options: {options}")

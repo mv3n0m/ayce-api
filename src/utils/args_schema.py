@@ -20,7 +20,8 @@ from .validations import (
     validate_url,
     validate_request_type,
     validate_request_status,
-    validate_profile_data_field
+    validate_profile_data_field,
+    validate_scheduled_transfers_period
 )
 
 
@@ -49,6 +50,13 @@ transfer_args = {
     "address": fields.Str(required=True, validate=validate_address),
     "description": fields.Str(required=False, validate=validate.Length(min=3)),
     "_type": fields.Str(required=False, validate=validate_transfer_type)
+}
+
+scheduled_transfers_options = ["daily", "weekly"]
+scheduled_transfer_args = {
+    "usd": fields.Str(required=False, validate=validate_scheduled_transfers_period),
+    "btc": fields.Str(required=False, validate=validate_scheduled_transfers_period),
+    "btc_address": fields.Str(required=False, validate=validate_address)
 }
 
 # pos_args = {
