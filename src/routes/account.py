@@ -25,9 +25,6 @@ def post_scheduled_transfers(merchant, *args, **kwargs):
 	usd = kwargs.get("usd")
 	btc_address = kwargs.get("btc_address")
 
-	if btc and usd:
-		return responsify({"error": "Either 'usd' or 'btc' accepted."}, 400)
-
 	if btc and not btc_address:
 		return responsify({"error": "btc_address is required for a scheduled btc transfer"}, 400)
 
