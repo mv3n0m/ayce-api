@@ -53,7 +53,7 @@ def post_scheduled_transfers(merchant, *args, **kwargs):
 	# TODO: accomodated multiple schedules and their confirmation using uuids
 	mdb.alter("users", {"_id": token}, {"schedules": {**(merchant.schedules or {}), "status": "pending", **kwargs}})
 
-	return responsify({"success": "OTP sent to merchant's email.", "token": token}, 200)
+	return responsify({"success": "OTP sent to merchant's email.", "token": token, "totp": otp}, 200)
 
 
 @route("/scheduled-transfers/resend-otp", ["POST"], token_args(), _identity=True)
@@ -79,7 +79,7 @@ def scheduled_transfers_resend(merchant, token):
 
 	rst._set(token, otp)
 
-	return responsify({"success": "OTP resent to merchant's email."}, 200)
+	return responsify({"success": "OTP resent to merchant's email.", "totp": otp}, 200)
 
 
 @route("/scheduled-transfers/confirm", ["POST"], { **token_args(), **otp_args}, _identity=True)
