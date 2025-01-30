@@ -40,7 +40,7 @@ def site_requests(*args, **kwargs):
     if kwargs.get("form_type") not in ["contact", "build"]:
         return responsify({"error": "Not found."}, 404)
 
-    kwargs.update({"submitted_at": f"{time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))} UTC"})
+    kwargs.update({"submitted_at": f'{time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))} UTC'})
 
     mdb.add("enquiries", kwargs)
 
@@ -61,7 +61,7 @@ def site_requests(*args, **kwargs):
 
 @route("/site/newsletter", ["POST"], _args=email_args, _auth=None)
 def site_newsletter(*args, **kwargs):
-    kwargs.update({"requested_at": f"{time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))} UTC"})
+    kwargs.update({"requested_at": f'{time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))} UTC'})
 
     mdb.add("newsletter_requests", kwargs)
 
