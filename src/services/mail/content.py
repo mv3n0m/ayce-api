@@ -127,7 +127,7 @@ def mail_content(mail_type="otp", name="", payload={}):
             )
         },
         "contact": {
-            "subject": f"New {payload.get("form_type")} enquiry",
+            "subject": f'New {payload.get("form_type")} enquiry',
             "body":
             """
                 <h4>Message from {name} - [{email}]:</h4>
