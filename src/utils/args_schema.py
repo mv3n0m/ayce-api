@@ -248,3 +248,10 @@ profile_data_args = {
 currency_args = {
     "currency": fields.Str(required=False, default="usd", validate=validate_currency)
 }
+
+
+contact_form_args = {
+    "name": fields.Str(required=True, validate=lambda x: len(x) > 1),
+    **email_args,
+    "message": fields.Str(required=True)
+}

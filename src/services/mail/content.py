@@ -125,6 +125,24 @@ def mail_content(mail_type="otp", name="", payload={}):
                 company_name=payload.get("company_name"),
                 contact_information=payload.get("contact_information")
             )
+        },
+        "contact": {
+            "subject": f"New {payload.get("form_type")} enquiry",
+            "body":
+            """
+                <h4>Message from {name} - [{email}]:</h4>
+                <b>&ldquo;</b><i>{message}</i><b>&rdquo;</b>
+            """.format(name=payload.get("name"),
+                email=payload.get("email"),
+                message=payload.get("message")
+            )
+        },
+        "newsletter": {
+            "subject": "Newsletter request",
+            "body":
+            """
+                Newsletter request from {email}.
+            """.format(email=payload.get("email"))
         }
     }
 
