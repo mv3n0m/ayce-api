@@ -249,7 +249,7 @@ def confirm_payouts(merchant_id, token, otp):
                 return responsify({"error": "Failed to transfer BTC"}, 500)
 
             transaction_id = content.get("result")
-            blockExplorer = f"https://blockstream.info/testnet/tx/{transaction_id}"
+            blockExplorer = f"https://blockstream.info/{BTC_ONCHAIN_NETWORK}/tx/{transaction_id}"
 
             transaction.update({
                 "updated_at": int(datetime.now().timestamp()),
