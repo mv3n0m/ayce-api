@@ -96,7 +96,7 @@ account_type_args = {
 auth_args = {
     **email_args,
     **password_args,
-    **account_type_args
+    # **account_type_args
 }
 
 
@@ -249,9 +249,16 @@ currency_args = {
     "currency": fields.Str(required=False, default="usd", validate=validate_currency)
 }
 
-
 contact_form_args = {
     "name": fields.Str(required=True, validate=lambda x: len(x) > 1),
     **email_args,
     "message": fields.Str(required=True)
+}
+
+admin_stats_args = {
+    "transactions": fields.Dict(required=False),
+    "fees": fields.Dict(required=False),
+    "accounts": fields.Dict(required=False),
+    "misc": fields.Dict(required=False),
+    **currency_args,
 }

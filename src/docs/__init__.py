@@ -3,7 +3,7 @@ from .constants import route_attrs, build_route_attrs
 from webargs import missing
 
 
-def decode_webargs(route, _auth="jwt", args=None):
+def decode_webargs(route, method, _auth="jwt", args=None):
     if not (args or _auth):
       return ""
 
@@ -28,7 +28,7 @@ parameters:"""
     schema:
       type: string"""
 
-    if args:
+    if args and method != "GET":
       docs += """
   - name: body
     in: body
@@ -50,7 +50,7 @@ parameters:"""
     return docs
 
 
-def get_docs(route, url_prefix, _args=None, _auth="jwt"):
+def get_docs(route, url_prefix, method, _args=None, _auth="jwt"):
     route_attr = route_attrs.get(url_prefix)
     if route_attr:
       route_attr = route_attr.get(route)
@@ -84,7 +84,7 @@ tags:"""
             docs += f"""
   - {tag}"""
 
-    docs += decode_webargs(route, _auth, _args)
+    docs += decode_webargs(route, method, _auth, _args)
     docs += f"""
 {route_attr.get("responses")}
 """

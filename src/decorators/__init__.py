@@ -30,7 +30,7 @@ def route_wrapper(bp, use_kwargs, url_prefix, route, methods=["GET"], _args={}, 
         def _wrapper(*inner_args, **inner_kwargs):
             return func(*inner_args, **inner_kwargs)
 
-        _wrapper.__doc__ = get_docs(route, url_prefix, _args, _auth)
+        _wrapper.__doc__ = get_docs(route, url_prefix, methods[0], _args, _auth)
         # print(_wrapper.__doc__)
         _wrapper.__name__ = func.__name__
         return _wrapper
