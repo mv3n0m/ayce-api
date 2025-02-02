@@ -1,103 +1,38 @@
 from .helpers import build_response_docs
 
 
+def build_route_attrs(route, url_prefix, title="", success_status_code=200):
+    url_prefix = url_prefix.removeprefix("/")
+    if not url_prefix:
+        return None
+
+    return {
+        "title": f"- {title}",
+        "description": None,
+        "tags": [url_prefix.title()],
+        "responses": build_response_docs([
+            {
+                "status_code": success_status_code,
+                "description": "success message",
+                "_type": "object",
+            },
+            {
+                "status_code": "4xx, 500",
+                "description": "error message",
+                "_type": "object",
+            },
+        ])
+    }
+
+
+
 route_attrs = {
-    "/test-route": {
-        "title": "Test route",
-        "tags": ["Test"],
-        "responses": build_response_docs([
-            {
-                "status_code": 200,
-                "description": "Test message",
-                "_type": "string"
-            }
-        ])
-    },
-    # Users
-    "/register": {
-        "title": "- for registering a new user.",
-        "description": None,
-        "tags": ["Users"],
-        "responses": build_response_docs([
-            {
-                "status_code": 201,
-                "description": "success message",
-                "_type": "object"
-            },
-            {
-                "status_code": "4xx, 500",
-                "description": "error message",
-                "_type": "object"
-            }
-        ])
-    },
-    "/verify": {
-        "title": "- for verifying a user's email.",
-        "description": None,
-        "tags": ["Users"],
-        "responses": build_response_docs([
-            {
-                "status_code": 200,
-                "description": "success message",
-                "_type": "object",
-            },
-            {
-                "status_code": "4xx, 500",
-                "description": "error message",
-                "_type": "object",
-            },
-        ])
-    },
-    "/login": {
-        "title": "- for user login.",
-        "description": None,
-        "tags": ["Users"],
-        "responses": build_response_docs([
-            {
-                "status_code": 200,
-                "description": "success message",
-                "_type": "object",
-            },
-            {
-                "status_code": "4xx, 500",
-                "description": "error message",
-                "_type": "object",
-            },
-        ])
-    },
-    "/request-password-reset": {
-        "title": "- for requesting a password reset.",
-        "description": None,
-        "tags": ["Users"],
-        "responses": build_response_docs([
-            {
-                "status_code": 200,
-                "description": "success message",
-                "_type": "object",
-            },
-            {
-                "status_code": "4xx, 500",
-                "description": "error message",
-                "_type": "object",
-            },
-        ])
-    },
-    "/reset-password": {
-        "title": "- for confirming a password reset.",
-        "description": None,
-        "tags": ["Users"],
-        "responses": build_response_docs([
-            {
-                "status_code": 200,
-                "description": "success message",
-                "_type": "object",
-            },
-            {
-                "status_code": "4xx, 500",
-                "description": "error message",
-                "_type": "object",
-            },
-        ])
+    "/users": {
+         "/register": build_route_attrs("/register", "/users", "for registering a new user.", 201),
+        "/verify": build_route_attrs("/verify", "/users", "for verifying a user's email."),
+        "/login": build_route_attrs("/login", "/users", "for user login."),
+        "/request-password-reset": build_route_attrs("/request-password-reset", "/users", "for requesting a password reset."),
+        "/reset-password": build_route_attrs("/reset-password", "/users", "for confirming a password reset."),
     },
     # Developers
     "/add-api-key": {
