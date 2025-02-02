@@ -8,7 +8,8 @@ swagger_types = {
     "integer": "integer",
     "float": "number",
     "list": "array",
-    "dict": "object"
+    "dict": "object",
+		"boolean": "boolean"
 }
 
 def decode_type(item):
