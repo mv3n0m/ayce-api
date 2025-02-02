@@ -22,7 +22,7 @@ def use_auth(_auth="jwt", _identity="False"):
     return decorator
 
 
-def route_wrapper(bp, use_kwargs, route, methods=["GET"], _args={}, _auth="jwt", _identity=False, *args, **kwargs):
+def route_wrapper(bp, use_kwargs, url_prefix, route, methods=["GET"], _args={}, _auth="jwt", _identity=False, *args, **kwargs):
     def decorator(func):
         @bp.route(route, methods=methods)
         @use_auth(_auth, _identity)
@@ -30,7 +30,7 @@ def route_wrapper(bp, use_kwargs, route, methods=["GET"], _args={}, _auth="jwt",
         def _wrapper(*inner_args, **inner_kwargs):
             return func(*inner_args, **inner_kwargs)
 
-        _wrapper.__doc__ = get_docs(route, _args, _auth)
+        _wrapper.__doc__ = get_docs(route, url_prefix, _args, _auth)
         # print(_wrapper.__doc__)
         _wrapper.__name__ = func.__name__
         return _wrapper

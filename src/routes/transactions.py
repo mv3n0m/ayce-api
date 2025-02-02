@@ -442,7 +442,7 @@ def create_transaction(merchant_id, amount, description="Ayce POS transaction"):
     return responsify(response, 201)
 
 
-@route("/pos/get-payment-addresses", ["POST"], token_args)
+@route("/pos/get-payment-addresses", ["POST"], token_args())
 def get_payment_addresses(merchant_id, token):
 
     transaction = mdb.get("transactions", {"_id": token}, {"_id": 0, "type": 0, "merchant_id": 0, "status": 0})
@@ -664,7 +664,7 @@ def get_exchange_conversion_rate(merchant_id, amount, _from, _to, description="I
     return responsify(response, 201)
 
 
-@route("/exchange/refresh-conversion-rate", ["POST"], token_args)
+@route("/exchange/refresh-conversion-rate", ["POST"], token_args())
 def refresh_exchange_rate(merchant_id, token):
     transaction = mdb.get("transactions", {"_id": token})
     if not transaction:

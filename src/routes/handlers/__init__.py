@@ -21,6 +21,6 @@ def create_blueprint(bp_name, module_name, url_prefix=""):
             {"error": "You have consumed your daily request quota."}, err.code)
 
     def route(*args, **kwargs):
-        return route_wrapper(bp, use_kwargs, *args, **kwargs)
+        return route_wrapper(bp, use_kwargs, url_prefix, *args, **kwargs)
 
     return bp, route
