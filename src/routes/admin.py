@@ -1,8 +1,8 @@
 from .handlers import create_blueprint
 from .handlers.user import User
 from src.utils import responsify
-from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args
-from src.settings import mdb, btcdc
+from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args, set_user_balance_args
+from src.settings import mdb, btcdc, btc_node
 from datetime import datetime, timedelta
 from flask import request
 
@@ -109,3 +109,70 @@ def update_stats(_user, *args, **kwargs):
     mdb.alter("admin_stats", _id_query, admin_stats, upsert=True)
 
     return responsify({"success": "Data updated successfully"})
+
+@route('/btc-node-balance', _identity=True)
+def node_balance(_user):
+
+    if (_user.account_type != "admin"):
+        return responsify({"error": "Unauthorized"}, 401)
+    
+    _balance = btc_node.get_balance()
+
+    response = {
+        "balance": _balance,
+        "in_usd": float(btcdc.convert(_balance, "btc")["_to"]["amount"])
+    }
+
+    return responsify(response)
+
+
+@route('/user-balances', _identity=True)
+def list_user_balances(_user):
+
+    if (_user.account_type != "admin"):
+        return responsify({"error": "Unauthorized"}, 401)
+    
+    response = mdb.get("users", {"account_type": {"$ne": "admin"}, "balances": {"$exists": 1}}, {"_id": 0, "email": 1, "balances": 1, "account_type": 1})
+
+    return responsify(response)
+
+
+@route('/user-balance', ["PUT"], _args=set_user_balance_args, _identity=True)
+def set_user_balance(_user, email, amount, currency="btc", force=None):
+
+    if (_user.account_type != "admin"):
+        return responsify({"error": "Unauthorized"}, 401)
+    
+    try:
+        user = User.from_email(email)
+    except Exception as e:
+        print(e)
+        return responsify({"error": "Invalid user email."}, 400)
+
+    node_balance = btc_node.get_balance()
+
+    if currency == "usd":
+        node_balance = float(btcdc.convert(node_balance, "btc")["_to"]["amount"])
+
+    if not force and amount > node_balance:
+        return responsify({"error": "Insufficient balance."}, 400)
+    
+    user_balances = user.balances
+    user_balances[currency] = amount
+
+    user.push({"balances": user_balances})
+
+    return responsify({"success": "User balance set succesfully"})
+    
+
+
+    
+
+   
+
+
+
+
+
+    
+    

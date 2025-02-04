@@ -1,6 +1,5 @@
 import os
 import logging
-import requests
 from .chains import _chains
 
 
@@ -56,3 +55,8 @@ class BTCNode:
 
     def transfer(self, *args, **kwargs):
         return self.nodes["on-chain"].send(*args, **kwargs)
+    
+    def get_balance(self):
+        _balance = self.nodes["on-chain"].get_wallet_balance()[1]["result"]
+
+        return _balance
