@@ -262,3 +262,10 @@ admin_stats_args = {
     "misc": fields.Dict(required=False),
     **currency_args,
 }
+
+set_user_balance_args = {
+    **email_args,
+    "amount": fields.Float(required=True),
+    "currency": fields.Str(required=False, default="btc", validate=validate_currency),
+    "force": fields.Bool(required=False)
+}
