@@ -94,7 +94,7 @@ def scheduled_transfers_confirm(merchant, token, otp):
 
 	rst._del(token)
 
-	mdb.alter("users", {"_id", merchant._id}, {"schedules.status": "confirmed"})
+	mdb.alter("users", {"_id": merchant._id}, {"schedules.status": "confirmed"})
 
 	return responsify({"success": "Scheduled transfers states updated."}, 200)
 
