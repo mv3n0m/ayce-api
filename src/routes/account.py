@@ -90,7 +90,7 @@ def scheduled_transfers_confirm(merchant, token, otp):
 		return responsify({"error": "Unable to confirm OTP."}, 400)
 
 	if otp != status:
-		return responsify("Invalid OTP.", 401)
+		return responsify({"error": "Invalid OTP."}, 401)
 
 	rst._del(token)
 

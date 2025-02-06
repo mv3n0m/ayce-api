@@ -37,7 +37,7 @@ def handle_jwt(require_user=False):
             print(e)
             return {"error": "JWT Token not associated with any user."}, 401
 
-        rst._set(user_id, status)
+        # rst._set(user_id, status)
         _user = status
 
     if _user != 'active':
