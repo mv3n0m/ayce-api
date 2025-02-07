@@ -15,22 +15,23 @@ bp, route = create_blueprint("account", __name__, "/account")
 
 @route("/scheduled-transfers", ["GET"], _identity=True)
 def get_scheduled_transfers(merchant):
-	return responsify(merchant.schedules)
+	return responsify(merchant.schedules["active"])
 
 
 @route("/scheduled-transfers", ["POST"], scheduled_transfer_args, _identity=True)
-def post_scheduled_transfers(merchant, *args, **kwargs):
-	# instead of false get the value from inside the record and ultimately a false if nothing (like ternary)
-	btc = kwargs.get("btc")
-	usd = kwargs.get("usd")
-	btc_address = kwargs.get("btc_address")
+def post_scheduled_transfers(merchant, btc=None, usd=None, btc_address=None, *args, **kwargs):
+
+	if not (btc or usd):
+		return responsify({"error": "Either btc or usd value required."}, 400)
+	
+	if btc and usd:
+		return responsify({"error": "Either btc or usd value accepted in single request."}, 400)
 
 	if btc and not btc_address:
 		return responsify({"error": "btc_address is required for a scheduled btc transfer"}, 400)
 
 	otp = str(random.randrange(100000, 1000000))
-	# replace with UUID
-	token = str(merchant._id)
+	token = str(uuid4())
 
 	try:
 		data = {
@@ -47,11 +48,22 @@ def post_scheduled_transfers(merchant, *args, **kwargs):
 		mailer.send(data)
 	except Exception as e:
 		print(e)
-		return responsify({"error": "Failed to send scheduled transfer updated confirmation email."}, 500)
+		return responsify({"error": "Failed to send scheduled transfer update confirmation email."}, 500)
 
 	rst._set(token, otp)
-	# TODO: accomodated multiple schedules and their confirmation using uuids
-	mdb.alter("users", {"_id": token}, {"schedules": {**(merchant.schedules or {}), "status": "pending", **kwargs}})
+
+	_key = "usd" if usd else "btc"
+	merchant_schedules = merchant.schedules or {}
+	pending_merchant_schedules = merchant_schedules.get("pending", {})
+	pending_merchant_schedules[_key] = {
+		"period": usd or btc,
+		"recipient": btc_address,
+		"token": token
+	}
+
+	merchant_schedules["pending"] = pending_merchant_schedules
+
+	mdb.alter("users", {"_id": merchant._id}, {"schedules": merchant_schedules})
 
 	return responsify({"success": "OTP sent to merchant's email.", "token": token, "totp": otp}, 200)
 
@@ -75,7 +87,7 @@ def scheduled_transfers_resend(merchant, token):
 		mailer.send(data)
 	except Exception as e:
 		print(e)
-		return responsify({"error": "Failed to send scheduled transfer updated confirmation email."}, 500)
+		return responsify({"error": "Failed to resend scheduled transfer update confirmation email."}, 500)
 
 	rst._set(token, otp)
 
@@ -84,6 +96,15 @@ def scheduled_transfers_resend(merchant, token):
 
 @route("/scheduled-transfers/confirm", ["POST"], { **token_args(), **otp_args}, _identity=True)
 def scheduled_transfers_confirm(merchant, token, otp):
+	
+	merchant_schedules = merchant.schedules or {}
+	pending_merchant_schedules = merchant_schedules.get("pending", {})
+
+	_schedule_item = next(filter(lambda x: x[1]["token"] == token, pending_merchant_schedules.items()), None)
+	if not _schedule_item:
+		return responsify({"error": "Invalid token"}, 400)
+	_key, _schedule = _schedule_item
+	
 	status = rst._get(token)
 
 	if not status or status == 'None':
@@ -94,7 +115,13 @@ def scheduled_transfers_confirm(merchant, token, otp):
 
 	rst._del(token)
 
-	mdb.alter("users", {"_id": merchant._id}, {"schedules.status": "confirmed"})
+	del _schedule["token"]
+	active_merchant_schedules = merchant_schedules.get("active", {})
+	active_merchant_schedules[_key] = _schedule
+	merchant_schedules["active"] = active_merchant_schedules
+	del merchant_schedules["pending"][_key]
+
+	mdb.alter("users", {"_id": merchant._id}, {"schedules": merchant_schedules})
 
 	return responsify({"success": "Scheduled transfers states updated."}, 200)
 
