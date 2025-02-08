@@ -15,7 +15,7 @@ bp, route = create_blueprint("account", __name__, "/account")
 
 @route("/scheduled-transfers", ["GET"], _identity=True)
 def get_scheduled_transfers(merchant):
-	return responsify(merchant.schedules["active"])
+	return responsify(merchant.schedules.get("active"))
 
 
 @route("/scheduled-transfers", ["POST"], scheduled_transfer_args, _identity=True)
@@ -23,7 +23,7 @@ def post_scheduled_transfers(merchant, btc=None, usd=None, btc_address=None, *ar
 
 	if not (btc or usd):
 		return responsify({"error": "Either btc or usd value required."}, 400)
-	
+
 	if btc and usd:
 		return responsify({"error": "Either btc or usd value accepted in single request."}, 400)
 
@@ -96,7 +96,7 @@ def scheduled_transfers_resend(merchant, token):
 
 @route("/scheduled-transfers/confirm", ["POST"], { **token_args(), **otp_args}, _identity=True)
 def scheduled_transfers_confirm(merchant, token, otp):
-	
+
 	merchant_schedules = merchant.schedules or {}
 	pending_merchant_schedules = merchant_schedules.get("pending", {})
 
@@ -104,7 +104,7 @@ def scheduled_transfers_confirm(merchant, token, otp):
 	if not _schedule_item:
 		return responsify({"error": "Invalid token"}, 400)
 	_key, _schedule = _schedule_item
-	
+
 	status = rst._get(token)
 
 	if not status or status == 'None':
