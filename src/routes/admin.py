@@ -165,8 +165,16 @@ def set_user_balance(_user, email, amount, currency="btc", force=None):
     return responsify({"success": "User balance set succesfully"})
     
 
+@route('/transactions', ["GET"], _identity=True)
+def get_transactions(_user):
 
-    
+    if (_user.account_type != "admin"):
+        return responsify({"error": "Unauthorized"}, 401)
+
+    records = mdb.get('manually_uploaded_transactions', {}, {'_id': 0})
+    print(len(records))
+
+    return responsify(records)
 
    
 
