@@ -44,11 +44,11 @@ def submit_details_confimation(user_id):
     mdb.alter("profile_data", {"user_id": user_id}, {"confirmed": True}, upsert=True)
     return responsify({"success": "Confirmation submitted successfully"}, 200)
 
-@route("/fetch-profile-data", ["POST"], _args=profile_data_args)
-def get_beneficial_owners(user_id, *args, **kwargs):
+@route("/", ["GET"])
+def get_profile_data(user_id, *args, **kwargs):
     record = mdb.get("profile_data", {"user_id": user_id}, {"_id": 0, "user_id": 0, "confirmed": 0})
     if not record:
-        return responsify({"error": "No data found"}, 404)
+        return responsify({"error": "No data available"}, 400)
 
     record = record[0]
 
