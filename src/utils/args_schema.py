@@ -162,7 +162,8 @@ payment_buttons_args = {
     "additional": fields.List(fields.Str(required=True), required=False),
     "success_url": fields.Str(required=False),
     "discount_code": fields.Str(required=False),
-    "discount": fields.Dict(keys=fields.Str, required=False, validate=validate_discount)
+    "discount": fields.Dict(keys=fields.Str, required=False, validate=validate_discount),
+    "is_donation": fields.Bool(required=False)
 }
 
 payment_information_args = {
