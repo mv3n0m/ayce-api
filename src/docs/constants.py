@@ -28,11 +28,12 @@ def build_route_attrs(route, url_prefix, title="", success_status_code=200):
 
 route_attrs = {
     "/users": {
-         "/register": build_route_attrs("/register", "/users", "for registering a new user.", 201),
+        "/register": build_route_attrs("/register", "/users", "for registering a new user.", 201),
         "/verify": build_route_attrs("/verify", "/users", "for verifying a user's email."),
         "/login": build_route_attrs("/login", "/users", "for user login."),
         "/request-password-reset": build_route_attrs("/request-password-reset", "/users", "for requesting a password reset."),
         "/reset-password": build_route_attrs("/reset-password", "/users", "for confirming a password reset."),
+        "/change-password": build_route_attrs("/change-password", "/users", "for changing a password.")
     },
     # Developers
     "/add-api-key": {
