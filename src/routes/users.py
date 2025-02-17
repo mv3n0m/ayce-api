@@ -26,3 +26,7 @@ def request_password_reset(*args, **kwargs):
 @route("/reset-password", ["POST"], {**token_args(), **password_args}, _auth=None)
 def reset_password(*args, **kwargs):
   return responsify(*User.reset_confirm(**kwargs))
+
+@route("/change-password", ["POST"], password_args)
+def change_password(user_id, *args, **kwargs):
+  return responsify(*User.change_password(user_id, **kwargs))

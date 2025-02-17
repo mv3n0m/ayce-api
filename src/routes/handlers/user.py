@@ -202,6 +202,25 @@ class User(Base):
         return {"success": "Password updation successful."}, 200
 
 
+    @classmethod
+    def change_password(cls, user_id, password):
+        try:
+            _user = super()._from_query({"_id": user_id})
+        except ValueError as e:
+            logging.info(f"{e}")
+            return {"error": "User doesn't exist."}, 404
+        except Exception as e:
+            logging.info(f"{e}")
+            return {"error": "Unable to fetch user."}, 500
+
+        if check_password_hash(_user.password, password):
+            return {"error": "Password cannot be set to the previous one."}, 400
+
+        _user.push({"password": generate_password_hash(password, "scrypt")})
+
+        return {"success": "Password updation successful."}, 200
+
+
     def get_balance(self, _key=None):
         if not _key:
             return self.balances
