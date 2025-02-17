@@ -13,7 +13,7 @@ from .handlers import create_blueprint
 
 bp, route = create_blueprint("transactions", __name__, "/transactions")
 
-@route("/collect-payment-details", ["POST"], payment_buttons_args)
+@route("/payment", ["POST"], payment_buttons_args)
 def record_payments(merchant_id, *args, **kwargs):
 
     token = "pay" + str(uuid4())
@@ -36,7 +36,7 @@ def record_payments(merchant_id, *args, **kwargs):
     return responsify({"payment_token": token, "success": "Payment record created."}, 201)
 
 
-@route("/get-payment-details/<payment_token>", ["GET"])
+@route("/payment/<payment_token>", ["GET"], _auth=None)
 def fetch_collectibles(merchant_id, payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
@@ -46,14 +46,14 @@ def fetch_collectibles(merchant_id, payment_token):
     return responsify(response, 200)
 
 
-@route("/list-payments", ["GET"])
+@route("/payments", ["GET"])
 def list_payments(merchant_id):
     response = mdb.get("payments", {"merchant_id": merchant_id}, {"_id": 0, "merchant_id": 0, "payer_details.updated_at": 0})
 
     return responsify(response, 200)
 
 
-@route("/update-payment-collectibles/<payment_token>", ["POST"])
+@route("/payment/<payment_token>/collect", ["POST"], _auth=None)
 def update_payment_collectibles(merchant_id, payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
