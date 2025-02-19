@@ -37,7 +37,7 @@ def record_payments(merchant_id, *args, **kwargs):
 
 
 @route("/payment/<payment_token>", ["GET"], _auth=None)
-def fetch_collectibles(merchant_id, payment_token):
+def fetch_collectibles(payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
@@ -54,7 +54,7 @@ def list_payments(merchant_id):
 
 
 @route("/payment/<payment_token>/collect", ["POST"], _auth=None)
-def update_payment_collectibles(merchant_id, payment_token):
+def update_payment_collectibles(payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
