@@ -185,4 +185,10 @@ def get_transactions(_user, *args, **kwargs):
 
     records = mdb.get('manually_uploaded_transactions', query, {'_id': 0})
 
-    return responsify(records)
+    total = {
+        "total_records": len(records),
+        "total_amount": sum(d.get("amount", 0) for d in records),
+        "total_fee_collected": sum(d.get("fee_collected", 0) for d in records)
+    }
+
+    return responsify({"data": records,  **total})
