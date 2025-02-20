@@ -285,3 +285,8 @@ transactions_filter_args = {
 #         description='Excel file containing transaction data'
 #     )
 # }
+
+collect_args = {
+    "collectibles": fields.Dict(required=False),
+    "additional": fields.Dict(required=False)
+}

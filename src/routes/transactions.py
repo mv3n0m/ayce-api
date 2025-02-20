@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from src.utils import responsify
 from src.services.aws import enqueue_transaction
 from src.settings import btc_node, mdb, rst, tknz, mailer, btcdc, BTC_ONCHAIN_NETWORK
-from src.utils.args_schema import wallet_name_args, token_args, transaction_args, exchange_args, transfer_args, otp_args, invoice_args, payouts_args, payment_buttons_args
+from src.utils.args_schema import wallet_name_args, token_args, transaction_args, exchange_args, transfer_args, otp_args, invoice_args, payouts_args, payment_buttons_args, collect_args
 from .handlers import create_blueprint
 
 bp, route = create_blueprint("transactions", __name__, "/transactions")
@@ -37,7 +37,7 @@ def record_payments(merchant_id, *args, **kwargs):
 
 
 @route("/payment/<payment_token>", ["GET"], _auth=None)
-def fetch_collectibles(payment_token):
+def fetch_payment_details(payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
@@ -53,21 +53,20 @@ def list_payments(merchant_id):
     return responsify(response, 200)
 
 
-@route("/payment/<payment_token>/collect", ["POST"], _auth=None)
-def update_payment_collectibles(payment_token):
-    response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
+@route("/payment/<payment_token>/collect", ["POST"], _args=collect_args, _auth=None)
+def update_payment_collectibles(payment_token, *args, **kwargs):
+    response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0})
     if not response:
         return responsify({"error": "Invalid payment token"}, 400)
     response = response[0]
 
-    payer_details = {"updated_at": int(datetime.now().timestamp())}
-    request_json = request.json
-    collectibles = response.get("collectibles", [])
-    collectibles += response.get("additional", [])
+    now = int(datetime.utcnow().timestamp())
+    payer_details = {"updated_at": now}
 
-    for k, v in request_json.items():
+    collectibles = response.get("collectibles", [])
+    for k, v in kwargs["collectibles"].items():
         if k in collectibles:
-            payer_details [k] = v
+            payer_details[k] = v
         else:
             return responsify({"error": f"Invalid collectible: {k}"}, 400)
 
@@ -75,9 +74,32 @@ def update_payment_collectibles(payment_token):
     if remaining:
         return responsify({"error": f"Missing required item/s: {list(remaining)}"}, 400)
 
-    mdb.alter("payments", {"payment_token": payment_token}, {"payer_details": payer_details})
+    additional = response.get("additional", [])
+    for k, v in kwargs.get("additional", {}).items():
+        if k in additional:
+            payer_details[k] = v
+        else:
+            return responsify({"error": f"Invalid additional: {k}"}, 400)
 
-    return responsify({"success": "Payment collectibles updated."}, 200)
+    label = f"{now}m{response.get("merchant_id")}"
+
+    price = response.get("price", {})
+    amount = price.get("amount", 0)
+    currency = price.get("currency", "btc")
+    if currency == "btc":
+        btc_value = amount
+    else:
+        btc_value = float(btcdc.convert(amount, currency)["_to"]["amount"])
+
+    # # Handle merchant wallet fetcher and creation of transaction data inside this method
+    addresses = btc_node.get_payment_addresses({"amount": btc_value, "label": label, "description": response.get("description")})
+
+    if addresses.get("error"):
+        return responsify({"error": "Failed to create payment address"}, 400)
+
+    mdb.alter("payments", {"payment_token": payment_token}, {"payer_details": payer_details, **addresses})
+
+    return responsify({"success": "Payment collectibles updated.", **addresses}, 200)
 
 
 @route("/payouts", ["POST"], payouts_args)
