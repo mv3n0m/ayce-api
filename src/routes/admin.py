@@ -1,7 +1,7 @@
 from .handlers import create_blueprint
 from .handlers.user import User
 from src.utils import responsify
-from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args, set_user_balance_args, transactions_filter_args, transaction_upload_args
+from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args, set_user_balance_args, transactions_filter_args
 from src.settings import mdb, btcdc, btc_node
 from datetime import datetime, timedelta
 from flask import request
