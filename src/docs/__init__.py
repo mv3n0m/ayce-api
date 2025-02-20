@@ -47,6 +47,16 @@ parameters:"""
               docs += f"""
             default: {v.default}"""
 
+    if args and method == "GET":
+      for k, v in args.items():
+        docs += f"""
+  - name: {k}
+    in: query
+    required: {v.required}
+    schema:
+      type: {decode_type(v)}
+      """
+
     return docs
 
 

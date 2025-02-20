@@ -26,7 +26,7 @@ def route_wrapper(bp, use_kwargs, url_prefix, route, methods=["GET"], _args={}, 
     def decorator(func):
         @bp.route(route, methods=methods)
         @use_auth(_auth, _identity)
-        @use_kwargs(_args)
+        @use_kwargs(_args, location='query' if methods[0] == 'GET' else 'json')
         def _wrapper(*inner_args, **inner_kwargs):
             return func(*inner_args, **inner_kwargs)
 
