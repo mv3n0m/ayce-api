@@ -1,4 +1,5 @@
 from webargs import fields, validate
+# from werkzeug.datastructures import FileStorage
 from .validations import (
     validate_token,
     validate_mode,
@@ -270,3 +271,17 @@ set_user_balance_args = {
     "currency": fields.Str(required=False, default="btc", validate=validate_currency),
     "force": fields.Bool(required=False)
 }
+
+transactions_filter_args = {
+    "year": fields.Str(required=False, validate=lambda x: len(x) == 4),
+    "month": fields.Str(required=False, validate=lambda x: len(x) == 2 and int(x) <= 12)
+}
+
+# transaction_upload_args = {
+#     "file": fields.Field(
+#         required=True,
+#         type_=FileStorage,
+#         location='files',
+#         description='Excel file containing transaction data'
+#     )
+# }

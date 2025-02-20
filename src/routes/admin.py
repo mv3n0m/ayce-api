@@ -1,7 +1,7 @@
 from .handlers import create_blueprint
 from .handlers.user import User
 from src.utils import responsify
-from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args, set_user_balance_args
+from src.utils.args_schema import token_args, auth_args, email_args, password_args, currency_args, admin_stats_args, set_user_balance_args, transactions_filter_args, transaction_upload_args
 from src.settings import mdb, btcdc, btc_node
 from datetime import datetime, timedelta
 from flask import request
@@ -115,7 +115,7 @@ def node_balance(_user):
 
     if (_user.account_type != "admin"):
         return responsify({"error": "Unauthorized"}, 401)
-    
+
     _balance = btc_node.get_balance()
 
     response = {
@@ -131,7 +131,7 @@ def list_user_balances(_user):
 
     if (_user.account_type != "admin"):
         return responsify({"error": "Unauthorized"}, 401)
-    
+
     response = mdb.get("users", {"account_type": {"$ne": "admin"}, "balances": {"$exists": 1}}, {"_id": 0, "email": 1, "balances": 1, "account_type": 1})
 
     return responsify(response)
@@ -142,7 +142,7 @@ def set_user_balance(_user, email, amount, currency="btc", force=None):
 
     if (_user.account_type != "admin"):
         return responsify({"error": "Unauthorized"}, 401)
-    
+
     try:
         user = User.from_email(email)
     except Exception as e:
@@ -156,31 +156,33 @@ def set_user_balance(_user, email, amount, currency="btc", force=None):
 
     if not force and amount > node_balance:
         return responsify({"error": "Insufficient balance."}, 400)
-    
+
     user_balances = user.balances
     user_balances[currency] = amount
 
     user.push({"balances": user_balances})
 
     return responsify({"success": "User balance set succesfully"})
-    
 
-@route('/transactions', ["GET"], _identity=True)
-def get_transactions(_user):
+
+@route('/transactions', ["GET"], _args=transactions_filter_args, _identity=True)
+def get_transactions(_user, *args, **kwargs):
 
     if (_user.account_type != "admin"):
         return responsify({"error": "Unauthorized"}, 401)
 
-    records = mdb.get('manually_uploaded_transactions', {}, {'_id': 0})
-    print(len(records))
+    year = kwargs.get("year")
+    month = kwargs.get("month")
+
+    if month and not year:
+        return responsify({"error": "year is required with month"}, 400)
+
+    query = {}
+    if year or month:
+        query = {
+            'processed_at': {'$regex': f'^{year}-{month or "*"}-'}
+        }
+
+    records = mdb.get('manually_uploaded_transactions', query, {'_id': 0})
 
     return responsify(records)
-
-   
-
-
-
-
-
-    
-    
