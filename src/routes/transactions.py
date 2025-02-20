@@ -81,7 +81,7 @@ def update_payment_collectibles(payment_token, *args, **kwargs):
         else:
             return responsify({"error": f"Invalid additional: {k}"}, 400)
 
-    label = f"{now}m{response.get("merchant_id")}"
+    label = f"{now}m{response.get('merchant_id')}"
 
     price = response.get("price", {})
     amount = price.get("amount", 0)
