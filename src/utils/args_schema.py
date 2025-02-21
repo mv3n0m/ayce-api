@@ -90,6 +90,11 @@ password_args = {
     "password": fields.Str(required=True) # add password validation
 }
 
+change_password_args = {
+    "new_password": password_args["password"],
+    "old_password": password_args["password"]
+}
+
 account_type_args = {
     "account_type": fields.Str(required=False, default="business", validate=validate_account_type) # add validation and wherever required above
 }
@@ -287,6 +292,6 @@ transactions_filter_args = {
 # }
 
 collect_args = {
-    "collectibles": fields.Dict(required=False),
+    "collectibles": fields.Dict(required=True),
     "additional": fields.Dict(required=False)
 }

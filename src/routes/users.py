@@ -1,7 +1,7 @@
 from .handlers.user import User
 from .handlers import create_blueprint
 from src.utils import responsify
-from src.utils.args_schema import token_args, auth_args, email_args, password_args
+from src.utils.args_schema import token_args, auth_args, email_args, password_args, change_password_args
 
 
 bp, route = create_blueprint("users", __name__, "/users")
@@ -27,6 +27,6 @@ def request_password_reset(*args, **kwargs):
 def reset_password(*args, **kwargs):
   return responsify(*User.reset_confirm(**kwargs))
 
-@route("/change-password", ["POST"], password_args)
+@route("/change-password", ["POST"], change_password_args)
 def change_password(user_id, *args, **kwargs):
   return responsify(*User.change_password(user_id, **kwargs))

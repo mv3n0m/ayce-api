@@ -203,7 +203,7 @@ class User(Base):
 
 
     @classmethod
-    def change_password(cls, user_id, password):
+    def change_password(cls, user_id, old_password, new_password):
         try:
             _user = super()._from_query({"_id": user_id})
         except ValueError as e:
@@ -213,10 +213,13 @@ class User(Base):
             logging.info(f"{e}")
             return {"error": "Unable to fetch user."}, 500
 
-        if check_password_hash(_user.password, password):
+        if not check_password_hash(_user.password, old_password):
+            return {"error": "Incorrect old password."}, 401
+
+        if check_password_hash(_user.password, new_password):
             return {"error": "Password cannot be set to the previous one."}, 400
 
-        _user.push({"password": generate_password_hash(password, "scrypt")})
+        _user.push({"password": generate_password_hash(new_password, "scrypt")})
 
         return {"success": "Password updation successful."}, 200
 
