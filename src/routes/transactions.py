@@ -36,6 +36,18 @@ def record_payments(merchant_id, *args, **kwargs):
     return responsify({"payment_token": token, "success": "Payment record created."}, 201)
 
 
+@route("/payment/<payment_token>", ["PUT"], payment_buttons_args)
+def update_payment_details(merchant_id, payment_token, *args, **kwargs):
+    response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
+    if not response:
+        return responsify({"error": "Invalid payment token"}, 400)
+    response = response[0]
+
+    mdb.alter("payments", {"payment_token": payment_token}, kwargs)
+
+    return responsify({"payment_token": token, "success": "Payment record updated."} , 200)
+
+
 @route("/payment/<payment_token>", ["GET"], _auth=None)
 def fetch_payment_details(payment_token):
     response = mdb.get("payments", {"payment_token": payment_token}, {"_id": 0, "merchant_id": 0})
